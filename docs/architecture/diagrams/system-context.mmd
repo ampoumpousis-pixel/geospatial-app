@@ -1,0 +1,29 @@
+flowchart LR
+    PU[Public User]
+    DM[Data Manager]
+    GP[GIS Professional]
+    AD[Administrator]
+
+    subgraph PLATFORM [GeoSpatial Resource Platform]
+        UI[Web UI]
+        API[REST API]
+    end
+
+    subgraph EXTERNAL [External Systems]
+        GS[GeoServer]
+        MS[MapStore]
+        CJ[CesiumJS]
+        PT[Potree]
+        GIS[GIS Clients]
+    end
+
+    PU -->|HTTPS| UI
+    DM -->|HTTPS| UI
+    GP -->|HTTPS| UI
+    AD -->|HTTPS| UI
+    UI -->|JSON| API
+    API -->|REST| GS
+    UI -->|Embed| MS
+    UI -->|Embed| CJ
+    UI -->|Embed| PT
+    GS -->|WMS/WFS/WMTS| GIS

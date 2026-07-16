@@ -1,0 +1,71 @@
+classDiagram
+    class Resource {
+        +UUID id
+        +string title
+        +string description
+        +ResourceType type
+        +User owner
+        +ResourceStatus status
+        +Geometry spatial_extent
+        +string crs
+        +boolean is_public
+    }
+
+    class Metadata {
+        +UUID id
+        +Resource resource
+        +string key
+        +string value
+    }
+
+    class Attachment {
+        +UUID id
+        +Resource resource
+        +string filename
+        +string mime_type
+        +bigint size
+        +string storage_path
+    }
+
+    class Collection {
+        +UUID id
+        +string name
+        +User owner
+    }
+
+    class PublishedService {
+        +UUID id
+        +Resource resource
+        +string service_type
+        +string service_url
+        +ServiceStatus status
+    }
+
+    class ResourcePermission {
+        +UUID id
+        +Resource resource
+        +User user
+        +Group group
+        +PermissionLevel level
+    }
+
+    class User {
+        +UUID id
+        +string username
+        +string email
+        +boolean is_active
+    }
+
+    class Group {
+        +UUID id
+        +string name
+    }
+
+    Resource "1" --> "*" Metadata
+    Resource "1" --> "*" Attachment
+    Resource "1" --> "*" PublishedService
+    Resource "1" --> "*" ResourcePermission
+    Collection "*" --> "*" Resource
+    User "1" --> "*" ResourcePermission
+    Group "1" --> "*" ResourcePermission
+    User "*" --> "*" Group

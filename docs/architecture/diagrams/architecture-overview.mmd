@@ -1,0 +1,39 @@
+flowchart TD
+    subgraph PRESENTATION [Presentation Layer]
+        UI[React Frontend<br/>TypeScript + MUI]
+        API[Django REST Framework]
+    end
+
+    subgraph APPLICATION [Application Layer]
+        RS[Resource Service]
+        MS[Metadata Service]
+        AS[Attachment Service]
+        PS[Permission Service]
+        PUB[Publishing Service]
+        VS[Visualization Service]
+        US[User Service]
+        SE[Search Engine]
+    end
+
+    subgraph INFRASTRUCTURE [Infrastructure Layer]
+        DB[(PostgreSQL + PostGIS)]
+        FS[File Storage<br/>Local / S3]
+        RD[(Redis)]
+        CW[Celery Workers]
+    end
+
+    subgraph EXTERNAL [External Integrations]
+        GS[GeoServer]
+        MV[MapStore / CesiumJS / Potree]
+    end
+
+    UI -->|HTTP| API
+    API --> APPLICATION
+    APPLICATION -->|Read/Write| DB
+    APPLICATION -->|Store| FS
+    APPLICATION -->|Queue| RD
+    APPLICATION -->|Async| CW
+    CW -->|Publish| GS
+    CW -->|Process| FS
+    UI -->|Embed| MV
+    UI -->|OGC| GS
