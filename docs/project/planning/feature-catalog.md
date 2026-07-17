@@ -356,31 +356,11 @@ Related Requirements: FR-06-01, US-PUB-003, US-PUB-004, US-GIS-006
 
 Risks: Medium (GDAL dependency, tile generation performance for large rasters, tile cache storage)
 
----
-
-## F-022 — Geocalendar Timelines
-
-Description:
-Visual timeline and calendar-based interface for exploring geospatial resources by acquisition date, creation date, or other temporal attributes. Combines a temporal timeline/calendar view with a synchronized map display, enabling users to browse, filter, and animate resources through time.
-
-Business Value:
-Unlocks temporal discovery of geospatial data — essential for change detection, time-series analysis, and monitoring workflows. Differentiates the platform from static catalog solutions.
-
-Priority: P2 (Nice to have)
-
-Dependencies: F-003, F-004, F-005, F-009; Enhancement from F-014
-
-Related Requirements: FR-03-03 (temporal search), FR-06-01 (map visualization)
-
-Risks: Medium (timeline performance with large datasets, temporal metadata consistency)
-
----
-
 # Priority Summary
 
 | Priority | Count | Features |
 |---|---|---|
 | P0 | 8 | F-001 through F-008 |
 | P1 | 5 | F-009, F-010, F-011, F-012, F-013 |
-| P2 | 6 | F-014, F-015, F-016, F-017, F-021, F-022 |
+| P2 | 5 | F-014, F-015, F-016, F-017, F-021 |
 | P3 | 3 | F-018, F-019, F-020 |
