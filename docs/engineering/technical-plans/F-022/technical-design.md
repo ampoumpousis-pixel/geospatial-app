@@ -4,925 +4,1179 @@
 
 | Field | Value |
 |---|---|
-| **Feature ID** | F-022 |
-| **Feature Name** | Geocalendar Timelines |
-| **Technical Design Version** | 1.0 |
-| **Status** | Draft |
-| **Author** | AGENT-103 — Technical Planner |
-| **Date** | 2026-07-16 |
-| **Priority** | P2 (Nice to have) |
-| **Dependencies** | F-003, F-004, F-005, F-009 |
-| **Enhancement Path** | F-014 (3D Globe Preview) |
-
----
+| Feature ID | F-022 |
+| Feature Title | Geocalendar Timelines |
+| Source Feature Specification | docs/project/features/F-022/feature-spec.md |
+| Source Specification Status | Ready for Technical Planning |
+| Technical Design Status | Ready for Task Planning |
+| Technical Design Version | 1.0 |
+| Owner | AGENT-103 — Technical Planner |
+| Created | 2026-07-17 |
+| Updated | 2026-07-17 |
+| Next Intended Owner | AGENT-104 — Task Planner |
 
 ## 2. Technical Overview
 
-F-022 adds a temporal browsing and discovery layer to the GeoSpatial Resource Platform. It introduces: (a) a horizontal timeline visualization for resources positioned by temporal attributes, (b) a calendar-density view, (c) two-way synchronization with the 2D map preview (F-009), (d) temporal search integration with F-005, and (e) an animation/playback mode for iterating through time on the map.
+The Geocalendar Timelines feature adds a temporal discovery dimension to the GeoSpatial Resource Platform. A new `timelines` Django application module provides server-side aggregation of Resource temporal metadata into histogram buckets, served through a REST API endpoint. On the frontend, a new `GeoTimeline` React component provides a timeline strip with histogram bars, a calendar date-range picker, and an animation playback controller. State synchronization between the timeline, the 2D Map Preview (F-009), and the Resource Search (F-005) is managed through a shared `TemporalFilterContext` React context and URL query parameters. The design reuses the existing key-value Metadata model (ADR-006) for temporal attribute storage, the DRF API layer (ADR-003), and the modular monolith pattern (ADR-002). The core engineering challenge is the timeline aggregation endpoint, which must perform efficiently across large catalogs through query-time aggregation with server-side caching.
 
-The feature is predominantly **frontend-heavy** (React + TypeScript + Material UI rendered timeline components) but requires **extended backend API support** (temporal query parameters on search, temporal aggregation endpoint, temporal metadata conventions). No new Django app is needed; the feature extends the existing `search` and `metadata` modules.
+## 3. Source Contract and Traceability
 
----
+### Approved Product Contract
 
-## 3. Source Feature Specification
+This technical design implements the approved Feature Specification for F-022. All functional requirements and acceptance criteria are preserved exactly as documented. No product behavior is invented or modified.
 
-- **File**: `docs/project/features/F-022/feature-spec.md`
-- **Feature ID**: F-022 ✓
-- **Status**: Draft
-- **Acceptance Criteria**: AC-01 through AC-08 defined ✓
-- **Ready for Technical Planning**: Implied by task instruction; formal marker should be added post-approval
-- **Dependencies**: F-003, F-004, F-005, F-009; Enhancement from F-014
-- **Open Questions**: 4 documented in spec §10 — resolved in §27 (Human Technical Decisions) below
+### Requirements-to-Design Traceability
 
----
+| Requirement or Acceptance Criterion | Design Response | Design IDs or Sections |
+|---|---|---|
+| FR-F022-001 / AC-F022-001 | Timeline histogram aggregated by temporal interval | CMP-F022-001, API-F022-001, DM-F022-001 |
+| FR-F022-002 / AC-F022-002 | Drag-to-select on timeline strip + date-picker calendar | CMP-F022-002 |
+| FR-F022-003 / AC-F022-003 | Temporal filter propagated to 2D Map Preview via context | CMP-F022-003, CMP-F022-004 |
+| FR-F022-004 / AC-F022-004 | Temporal filter applied to Resource Search results | API-F022-002, CMP-F022-003 |
+| FR-F022-005 / AC-F022-005 | Animation playback controller with play/pause/stop/speed | CMP-F022-002 |
+| FR-F022-006 / AC-F022-006 | Temporal attribute selector (field picker) | CMP-F022-002, API-F022-001 |
+| FR-F022-007 / AC-F022-007 | Single-action clear/reset filter | CMP-F022-003 |
+| FR-F022-008 / AC-F022-001 | Empty intervals visually distinct from populated | CMP-F022-001 |
+| FR-F022-009 | Temporal filter state in URL query parameters | CMP-F022-003 |
+| FR-F022-010 / AC-F022-008 | Permission enforcement on timeline counts, map, and list | CMP-F022-001, API-F022-001 |
 
 ## 4. Architectural Context
 
-### 4.1 Module Alignment
+### Relevant Current Architecture
 
-The feature does not introduce a new Django module. It extends existing modules:
+The platform follows a modular monolith (ADR-002) with Django backend and React/TypeScript frontend. The backend is organized as Django application modules (`resources`, `metadata`, `search`, `permissions`, `visualization`, etc.). The metadata module (ADR-006) stores temporal attributes as key-value pairs on the Metadata model: `(resource, key, value, data_type)`. The search module provides faceted filtering via DRF. The 2D Map Preview (F-009) is a React component that communicates with the backend for resource spatial data.
 
-| Module | Role in F-022 |
-|---|---|
-| **resources** | Supplies `Resource.created_at` / `Resource.updated_at` as fallback temporal fields; no model changes |
-| **metadata** | Houses temporal metadata (`acquisition_date`, `creation_date`, custom date fields) via key-value model (ADR-006); requires documented key conventions |
-| **search** | Primary API extension target — new query params, temporal aggregation endpoint, faceted date counts |
-| **visualization** | No changes needed; timeline is a standalone UI component. The 2D map (MapStore) integration is via existing F-009 map store/state |
+### Binding ADRs
 
-### 4.2 Frontend Architecture Fit
+- **ADR-001 (Resource-Centric Domain):** The timeline operates on Resources. Temporal metadata is a Resource property, not a layer property.
+- **ADR-002 (Modular Monolith):** The `timelines` module is a new Django app within the monolith. It calls into `metadata` and `resources` via Python function calls, not HTTP.
+- **ADR-003 (Django REST Framework):** All new API endpoints use DRF ViewSets/APIViews with standard patterns.
+- **ADR-006 (Flexible Metadata):** Temporal attributes are stored as Metadata rows with consistent key naming. The timeline reads and aggregates these rows.
 
-The frontend component hierarchy (defined in `component-design.md`) includes shared components for `Map Preview`, `Search Bar`, `Filter Panel`, and an `API Client Layer`. F-022 adds a `Timeline Panel` shared component that integrates with the existing search and map systems.
+### Existing Reusable Capabilities
 
-State management (React Context / Redux per system-overview.md) receives a new slice/context for timeline state.
+- **Metadata model:** The key-value Metadata model stores temporal dates as `(resource_id, key="temporal:acquisition_date", value="2026-01-15", data_type="date")`.
+- **Resource model:** Core Resource entity with UUID, owner, spatial_extent, status, and permission integration.
+- **Permission service:** Object-level access control (ResourcePermission). The timeline must filter results to authorized Resources only.
+- **DRF framework:** ViewSets, serializers, pagination, and permission classes.
+- **Celery/Redis:** Available for background aggregation cache warming if needed.
+- **React Context:** State management pattern for cross-component state (proposed for filter sync).
 
-### 4.3 ADR Alignment
+### Affected Boundaries
 
-| ADR | Constraint | Compliance |
-|---|---|---|
-| ADR-001 (Resource-Centric) | Temporal data associated with Resource | ✓ Dates on Resource model + Metadata key-value pairs |
-| ADR-002 (Modular Monolith) | No new module; extends search | ✓ |
-| ADR-003 (DRF API) | REST endpoints for temporal data | ✓ ViewSets / custom endpoints |
-| ADR-004 (Plugin Viewers) | Timeline is not a viewer — no conflict | ✓ |
-| ADR-005 (Abstracted Publishing) | No publishing changes | ✓ |
-| ADR-006 (Flexible Metadata) | Temporal fields stored as key-value | ✓ Requires key conventions (see §15) |
+- `search` module: Gains a temporal filter query parameter.
+- `visualization` / `Map Preview` component: Must accept temporal filter parameters from context.
+- `metadata` module: Temporal keys must follow a documented naming convention for consistent querying.
 
----
+### Material Documentation/Implementation Discrepancies
+
+No implementation exists yet. The project is in the foundation phase with no code written. All architecture documentation is consistent with this design.
 
 ## 5. Design Goals
 
-| Goal | Priority | Rationale |
-|---|---|---|
-| **Smooth interaction at 10K+ resources** | Critical | AC-08 mandates < 2 s render time for 10,000 resources |
-| **Responsive map-timeline sync** | High | Users panning the map should see timeline update in < 500 ms |
-| **Consistent date handling** | High | Resources may come from different sources with different timezones |
-| **Low integration friction** | Medium | Timeline is optional; existing search + map flows must work unchanged when timeline is hidden |
-| **Animation performance** | Medium | Animation frames must play at > 15 fps for a smooth experience |
-
----
+1. **Responsiveness:** The timeline histogram must update within 3 seconds (per product constraint EAF-F022-001) for catalogs up to 100,000 Resources. Target: <1s for typical catalogs.
+2. **Synchronization:** The map preview and resource list must always reflect the current temporal filter; no visual desynchronization is acceptable.
+3. **Animation smoothness:** Animation playback must not cause browser unresponsiveness (per EAF-F022-002). Target: 30+ fps at animation step transitions.
+4. **Configurable temporal attributes:** Administrators can define which temporal metadata fields are available for timeline use without code changes (per EAF-F022-003).
+5. **Bookmarkable state:** Temporal filter state is encoded in URL parameters and reproduces correctly when shared (per EAF-F022-005).
+6. **Permission-safe:** The timeline never exposes Resource counts or spatial data that the user is not authorized to view (FR-F022-010).
 
 ## 6. Technical Constraints
 
-1. **No new Django app** — feature extends `resources`, `metadata`, and `search` modules only.
-2. **No WebSocket infrastructure** — all data flows are request-response (REST). Animation playback is purely client-side.
-3. **No real-time updates** — timeline refreshes on user action or map pan, not via streaming.
-4. **MapStore integration is via URL/API, not direct DOM access** — communication with MapStore goes through its public JavaScript API or URL state.
-5. **Timeline library must be MIT/Apache-licensed** — must align with project licensing.
-6. **All dates stored in UTC** — timezone conversion is a display-layer concern.
-
----
-
-## 7. Non-Functional Requirements
-
-| ID | Requirement | Target |
-|---|---|---|
-| NFR-01 | Timeline render time for 10K resources | < 2 seconds (p95) |
-| NFR-02 | Map pan → timeline update latency | < 500 ms |
-| NFR-03 | Timeline → map filter latency | < 500 ms |
-| NFR-04 | Animation frame rate | ≥ 15 fps for ≤ 500 resources, ≥ 8 fps for 500+ |
-| NFR-05 | Search with temporal facets response time | < 2 seconds (p95) for 10K catalog |
-| NFR-06 | Timeline UI memory footprint | < 100 MB for 10K resources |
-
----
-
-## 8. Requirements-to-Design Traceability
-
-| Requirement | Design Element(s) | Verification |
-|---|---|---|
-| FR-022-01 (Timeline View) | `TimelineView` component, `TemporalAggregationAPI`, clustering logic | AC-01 (100+ resources) |
-| FR-022-02 (Calendar View) | `CalendarView` component, `TemporalAggregationAPI` (day-level counts) | AC-02 |
-| FR-022-03 (Map-Timeline Sync) | `MapSync` hook, `TimelineStore`, `MapStore` integration | AC-03, AC-04 |
-| FR-022-04 (Temporal Search Integration) | Extended `SearchAPI` params, `TemporalSearchFacet` component | AC-05 |
-| FR-022-05 (Temporal Metadata Support) | Temporal key conventions in metadata module, fallback logic | AC-07 |
-| FR-022-06 (Animation Mode) | `AnimationControls` component, `AnimationEngine` utility | AC-06 |
-| AC-08 (Performance) | Virtual scrolling, clustering, lazy loading | AC-08 (perf test < 2 s) |
-
----
-
-## 9. Reuse Analysis
-
-| Existing Capability | Decision | Reason |
-|---|---|---|
-| F-005 Search API (`/api/search/`) | **Extend** | Add `date_from`, `date_to`, `date_field` query params |
-| F-005 Search facets | **Extend** | Add temporal aggregated facets (year, month) |
-| F-009 Map Store (MapStore API) | **Reuse** | Use MapStore's map extent API to get viewport bounds for timeline filtering |
-| F-004 Metadata CRUD (`/api/resources/{id}/metadata/`) | **Reuse** | Temporal date fields stored/edited via existing metadata endpoints |
-| `Resource.created_at` / `updated_at` | **Reuse** | Used as fallback temporal fields when explicit dates are missing |
-| Material UI (existing design system) | **Reuse** | Calendar grid, date pickers, tooltips, sliders from MUI |
-| API Client Layer | **Reuse** | Existing `apiClient` for all new endpoint calls |
-| Resource Detail View (F-006) | **Reuse** | Timeline marker preview navigates to F-006 detail page |
-| React Router | **Reuse** | Navigation from timeline markers to resource detail |
-
----
-
-## 10. Alternatives Considered
-
-### 10.1 Timeline Rendering Library
-
-| Option | Pros | Cons | Decision |
-|---|---|---|---|
-| **vis-timeline** (vis.js community edition) | Mature, zoom/pan built-in, clustering, custom styling | Bundle size (~150 KB gzipped), React wrapper is third-party | **Selected** |
-| Custom d3-based timeline | Full control, no extra dependency | Significant engineering effort (estim. 2-3 weeks), no built-in interactive features | Rejected — too high effort |
-| Custom canvas-based timeline | Maximum performance for 10K+ points | No accessibility, no CSS styling, extreme development cost | Rejected |
-| Airbnb's react-dates | Calendar already built | No timeline, map sync would be custom | Rejected — does not meet timeline requirement |
-
-**Decision**: Use **vis-timeline** (community edition, MIT licensed) via the `react-vis-timeline` wrapper or a thin custom React wrapper. If the bundle size becomes a concern at scale, we can code-split the timeline module.
-
-### 10.2 Calendar View Implementation
-
-| Option | Pros | Cons | Decision |
-|---|---|---|---|
-| **Custom MUI Grid calendar** | Consistent with design system, full control | Manual implementation of date math and density heatmap | **Selected** |
-| react-calendar | Ready-made, lightweight | Different styling, limited density heatmap support | Rejected — MUI alignment preferred |
-| FullCalendar | Very feature-rich | Heavy bundle, opinionated event model | Rejected — overkill |
-
-### 10.3 Clustering Strategy
-
-| Option | Pros | Cons | Decision |
-|---|---|---|---|
-| **API-level aggregation** | Minimal data over the wire, scalable | Server load for aggregation queries | **Selected primary** — backend returns counts per time bucket |
-| Client-side clustering | Full control, real-time | Requires fetching all resource dates (~10K), high memory | Rejected for initial load; used for zoom transitions |
-
-### 10.4 Animation Engine
-
-| Option | Pros | Cons | Decision |
-|---|---|---|---|
-| **requestAnimationFrame loop** | Smooth, browser-optimized | Must manage frame timing manually | **Selected** |
-| setInterval | Simple | Janky, unreliable frame rate | Rejected |
-| Framer Motion AnimatePresence | Good for transitions | Not designed for frame-by-frame time iteration | Rejected |
-
----
-
-## 11. Component Design
-
-### 11.1 React Component Tree
-
-```
-TimelinePanel                    ← Top-level container (toggleable from search/map toolbar)
-├── TimelineToolbar              ← Zoom level buttons, date field selector, view toggle (timeline/calendar)
-├── TimelineView                 ← Horizontal timeline (uses vis-timeline if loaded, or fallback)
-│   ├── TimelineAxis             ← Time scale ruler (decade/year/month/week/day labels)
-│   ├── TimelineMarkers          ← Container for markers/clusters
-│   │   ├── TimelineMarker       ← Individual resource marker
-│   │   └── TimelineCluster      ← Grouped marker (count badge + density bar)
-│   ├── TimelineTooltip          ← Hover preview (title, date, thumbnail)
-│   └── TimelineRangeSelector    ← Draggable range selection overlay
-├── CalendarView                 ← Month/year grid with density heatmap (toggle)
-│   ├── CalendarHeader           ← Month/year navigation arrows + month/year selector
-│   ├── CalendarGrid             ← CSS grid of day cells
-│   │   └── CalendarDay          ← Single day cell (color intensity = count)
-│   └── CalendarLegend           ← Color scale legend
-├── AnimationControls            ← Play/pause, step, speed slider
-│   ├── PlayPauseButton
-│   ├── StepForwardButton
-│   ├── StepBackwardButton
-│   └── SpeedSlider
-└── TemporalSearchFacet          ← Facet chip group (years, months) for F-005 search integration
-
-Shared types (TypeScript interfaces):
-- TimelineResource { id, title, date (ISO 8601), dateField, thumbnail?, resourceType, detailUrl }
-- TimelineBounds { start: Date, end: Date }
-- ZoomLevel: 'decade' | 'year' | 'month' | 'week' | 'day'
-- CalendarDayData { date: string, count: number, resources?: TimelineResource[] }
-```
-
-### 11.2 Backend Components
-
-```
-search/
-├── views.py                     ← Extended: temporal aggregation endpoint
-├── serializers.py               ← Extended: TemporalAggregationSerializer
-├── filters.py                   ← Extended: DateRangeFilter, DateFieldFilter
-├── urls.py                      ← Extended: new temporal routes
-
-metadata/
-├── temporal_keys.py             ← NEW: Temporal field key constants and conventions
-```
-
-### 11.3 Frontend Service Modules
-
-```
-frontend/src/
-├── features/
-│   └── timeline/
-│       ├── components/          ← All timeline React components
-│       ├── hooks/
-│       │   ├── useTimelineStore.ts        ← Timeline state (Zustand)
-│       │   ├── useMapSync.ts              ← Map-timeline two-way sync
-│       │   ├── useAnimationEngine.ts      ← requestAnimationFrame loop
-│       │   └── useTemporalSearch.ts       ← Search integration hook
-│       ├── services/
-│       │   ├── temporalApi.ts             ← API client for temporal endpoints
-│       │   └── clusteringEngine.ts        ← Client-side clustering utility
-│       ├── types.ts            ← TypeScript interfaces
-│       └── constants.ts        ← Zoom levels, date formats, etc.
-├── store/
-│   └── timelineStore.ts        ← Zustand store slice
-└── shared/
-    └── utils/
-        └── dateUtils.ts        ← Date formatting, timezone, aggregation helpers
-```
-
----
-
-## 12. Runtime and Data Flows
-
-### 12.1 Initial Timeline Load
-
-```
-User opens search/map page with timeline enabled
-    ↓
-TimelinePanel mounts
-    ↓
-useTimelineStore initializes: defaultBounds = [today - 1 year, today], zoomLevel = 'month'
-    ↓
-useMapSync reads current map viewport bounds from MapStore API
-    ↓
-temporalApi.fetchTemporalAggregation({
-    bbox: mapBounds,
-    date_field: 'acquisition_date',
-    bucket: 'month',          // determined by zoom level
-    date_from: bounds.start,
-    date_to: bounds.end
-})
-    ↓
-API returns: { buckets: [{ date: '2024-01', count: 12 }, ...], total_with_dates: 342, total_without_dates: 15 }
-    ↓
-TimelineView renders markers/clusters from bucket data
-CalendarView (if toggled) renders day-level density
-    ↓
-If zoom < 'week': fetch aggregated counts only
-If zoom >= 'week': fetch individual resource date list for visible range
-```
-
-### 12.2 Map Pan → Timeline Update
-
-```
-User pans/zooms 2D map (MapStore)
-    ↓
-MapStore fires 'extentchanged' event
-    ↓
-useMapSync hook listens, debounces (300 ms)
-    ↓
-Reads new map extent: [minX, minY, maxX, maxY]
-    ↓
-Transforms to geographic bounding box
-    ↓
-temporalApi.fetchTemporalAggregation({ bbox: newBounds, ...currentFilters })
-    ↓
-TimelineStore updates bucket data
-    ↓
-TimelineView re-renders with new markers
-```
-
-### 12.3 Timeline Selection → Map Filter
-
-```
-User drags range selection on timeline, or clicks calendar day
-    ↓
-TimelineRangeSelector emits onRangeChange({ start, end })
-    ↓
-TimelineStore.setSelectedRange({ start, end })
-    ↓
-useMapSync applies date filter to map:
-    - If map supports filter API: call MapStore.setLayerFilter('date-filter')
-    - If no native filter: reload map layers with date range URL param
-    ↓
-MapStore view updates to show only resources in selected range
-    ↓
-(Optional) Search results list updates to show filtered resources
-```
-
-### 12.4 Animation Playback
-
-```
-User clicks Play
-    ↓
-AnimationControls → useAnimationEngine.start()
-    ↓
-useAnimationEngine reads: { range: [start, end], speed: '1 day/frame', currentDate }
-    ↓
-requestAnimationFrame loop:
-    ↓
-  For each frame:
-    1. Advance currentDate by step (determined by speed + zoom level)
-    2. TimelineStore.setCurrentFrame(currentDate)
-    3. useMapSync filters map to currentDate +/- half-step
-    4. FrameIndicator updates
-    5. If currentDate >= end: stop / loop
-    ↓
-User clicks Pause → useAnimationEngine.stop()
-User clicks Step → advance one frame manually
-User adjusts SpeedSlider → useAnimationEngine.setSpeed(newSpeed)
-```
-
-### 12.5 Temporal Search Integration
-
-```
-User types search query in F-005 search bar
-    ↓
-SearchAPI called with { q: query, date_from, date_to }
-    ↓
-Results include temporal facet aggregations:
-    { facet: 'year', values: [{ value: '2024', count: 45 }, { value: '2023', count: 32 }] }
-    ↓
-TemporalSearchFacet renders year/month chips
-    ↓
-User clicks a facet year → SearchAPI updated with year filter
-    ↓
-Results and timeline both update
-```
-
----
-
-## 13. Data Model Changes
-
-### 13.1 No New Database Tables
-
-The existing `metadata` key-value model (ADR-006) is sufficient. No new models or migrations are required.
-
-### 13.2 Temporal Metadata Key Conventions
-
-To ensure consistency across resources, temporal metadata keys MUST follow a documented convention:
-
-| Key | Type | Required | Description |
-|---|---|---|---|
-| `temporal.acquisition_date` | `date` (ISO 8601) | No | When the resource data was originally acquired/captured |
-| `temporal.creation_date` | `date` (ISO 8601) | No | When the resource file was created |
-| `temporal.publication_date` | `date` (ISO 8601) | No | When the resource was published/released |
-| `temporal.date_custom` | `date` (ISO 8601) | No | User-specified custom date |
-| `temporal.date_custom_label` | `string` | No | Label for the custom date field |
-| `temporal.date_precision` | `enum` | No | `day`, `month`, `year` — indicates precision of the date |
-
-**Temporal field resolution order** (for timeline display):
-1. `temporal.acquisition_date` (if present)
-2. `temporal.creation_date` (if present)
-3. `Resource.created_at` (fallback)
-4. Exclude from timeline if none of the above (user notified)
-
-### 13.3 Database Index Recommendation
-
-For performance at 10K+ resources, add a composite index on the metadata table for temporal queries:
-
-```sql
-CREATE INDEX CONCURRENTLY idx_metadata_temporal
-ON metadata (resource_id, key, value)
-WHERE key LIKE 'temporal.%';
-```
-
-This is a query optimization, not a schema change. The index can be added via a Django migration in the `metadata` app.
-
----
-
-## 14. API Design
-
-### 14.1 Extended Search Endpoint
-
-**Existing**: `GET /api/search/`
-
-**Extended with temporal parameters**:
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `date_from` | `string` (ISO 8601 date) | No | Start of temporal filter range |
-| `date_to` | `string` (ISO 8601 date) | No | End of temporal filter range |
-| `date_field` | `string` | No | Temporal key to use (default: `temporal.acquisition_date`) |
-| `date_bucket` | `enum` | No | Aggregation bucket: `year`, `month`, `week`, `day` |
-
-**Response additions** (in existing search response):
-
-```json
-{
-    "count": 1240,
-    "next": "...",
-    "previous": null,
-    "results": [...],
-    "temporal_facets": {
-        "years": [
-            {"value": "2024", "count": 450},
-            {"value": "2023", "count": 320}
-        ],
-        "months": [
-            {"value": "2024-01", "count": 45},
-            {"value": "2024-02", "count": 52}
-        ]
-    },
-    "temporal_summary": {
-        "total_with_dates": 1200,
-        "total_without_dates": 40,
-        "date_range": {
-            "earliest": "2020-01-15",
-            "latest": "2026-06-30"
-        }
-    }
-}
-```
-
-### 14.2 Temporal Aggregation Endpoint (New)
-
-**Purpose**: Provides pre-aggregated time bucket counts for timeline rendering. This is the primary data source for the timeline view, optimized for speed over completeness.
-
-**Endpoint**: `GET /api/search/temporal-aggregation/`
-
-**Parameters**:
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `bbox` | `string` (comma-separated floats) | No | Spatial filter: `minx,miny,maxx,maxy` |
-| `date_field` | `string` | No | Temporal key (default: `temporal.acquisition_date`) |
-| `date_from` | `string` (ISO 8601 date) | No | Range start |
-| `date_to` | `string` (ISO 8601 date) | No | Range end |
-| `bucket` | `enum` | **Yes** | `year`, `month`, `week`, `day` |
-| `q` | `string` | No | Search query to intersect with temporal |
-| `resource_types` | `string` (comma-separated) | No | Filter by resource type |
-
-**Response**:
-
-```json
-{
-    "buckets": [
-        {"date": "2024-01", "count": 12},
-        {"date": "2024-02", "count": 8}
-    ],
-    "total_in_range": 120,
-    "total_without_date": 15,
-    "date_field_used": "temporal.acquisition_date",
-    "available_date_fields": [
-        {"key": "temporal.acquisition_date", "label": "Acquisition Date", "count": 800},
-        {"key": "temporal.creation_date", "label": "Creation Date", "count": 600},
-        {"key": "resource.created_at", "label": "Upload Date", "count": 1240}
-    ]
-}
-```
-
-**Implementation notes**:
-- The aggregation is performed in PostgreSQL using `date_trunc()` on the metadata value cast to date
-- For `resource.created_at` fallback, query the Resource table directly
-- Response should be cached for 60 seconds at the API gateway / Redis layer for repeated calls during map panning
-
-### 14.3 Bulk Date Assignment Endpoint
-
-**Extends existing**: `POST /api/resources/{id}/metadata/`
-
-Add temporal metadata via existing metadata CRUD. No new endpoint needed.
-
-For bulk operations (FR-022-05 mentions bulk date assignment), extend the existing batch metadata endpoint if it exists, or create:
-
-**New**: `POST /api/resources/bulk-metadata/`
-
-```json
-{
-    "resource_ids": ["uuid-1", "uuid-2"],
-    "metadata": {
-        "temporal.acquisition_date": "2024-06-15"
-    }
-}
-```
-
----
-
-## 15. Integration Points
-
-| Integration | Direction | Mechanism | Notes |
-|---|---|---|---|
-| **Timeline ↔ MapStore (F-009)** | Bidirectional | MapStore JavaScript API (`mapStore.getMapConfig()`, extent events) | MapStore exposes map state via window events or its own React context |
-| **Timeline ↔ Search API (F-005)** | One-way (timeline reads search) | HTTP GET to search endpoint with temporal params | Timeline acts as a search consumer |
-| **Timeline ↔ Resource Metadata (F-004)** | One-way (read) | HTTP GET to metadata endpoint(s) | Timeline reads `temporal.*` keys from metadata |
-| **Calendar ↔ Temporal Aggregation API** | One-way (read) | HTTP GET to `/api/search/temporal-aggregation/` | Calendar view fetches day-level counts |
-| **Animation ↔ MapStore** | One-way (animation drives map) | MapStore URL update or filter API | Animation frame updates map display via date filter |
-
-### 15.1 MapStore Integration Detail
-
-MapStore (the 2D map viewer) is embedded in the page. Communication patterns:
-
-1. **Read map bounds**: Access MapStore's state via its React context or the global `mapStore` object. MapStore exposes `currentExtent` and `projection` through its API.
-
-2. **Apply temporal filter**: MapStore has a **LayerFilter** capability. We can apply a CQL filter on the WMS/WFS layer if the layer is served through GeoServer. Alternatively, for resource previews that are rendered via MapStore's own layer management, we can add/remove layer groups based on the date range.
-
-3. **Animation**: Update the CQL filter on each animation frame. For raster resources, switch between different WMS time dimensions if available.
-
-**Fallback**: If MapStore's filter API is insufficient, the frontend can:
-- Collect resource IDs matching the temporal range
-- Toggle visibility layers per resource
-- Redraw the map layer with a filter parameter
-
----
-
-## 16. Storage Strategy
-
-### 16.1 Database
-
-- Temporal metadata stored in the existing `metadata` table (key-value)
-- `Resource.created_at` / `updated_at` exist on the `resources_resource` table
-- No new tables required
-- Recommended: composite index on `metadata(key, value)` for temporal query patterns (see §13.3)
-
-### 16.2 Caching
-
-- Temporal aggregation responses SHOULD be cached in Redis with a 30–60 second TTL
-- Cache key format: `temporal_agg:{bbox_hash}:{date_field}:{bucket}:{date_from}:{date_to}:{q}`
-- This prevents redundant aggregation queries during rapid map panning
-- Cache invalidated when new resources are uploaded or metadata changes (via Celery signal)
-
-### 16.3 Client-Side Storage
-
-- Timeline marker data cached in React state (Zustand store)
-- No IndexedDB or localStorage required for v1
-- Future optimization: cache aggregated data in sessionStorage for back-navigation
-
----
-
-## 17. Performance Strategy
-
-### 17.1 Server-Side
-
-| Technique | Application | Target |
-|---|---|---|
-| **Aggregation queries** | Temporal aggregation endpoint uses SQL `date_trunc` + `COUNT` | Returns in < 200 ms for 10K |
-| **Paginated resource fetching** | Individual resource data only fetched at zoom ≥ week level | Limits payload size |
-| **Database index** | Composite index on metadata key-value | Sub-millisecond lookups |
-| **Redis caching** | Cache aggregation results for 30-60 s | Avoids redundant queries during panning |
-| **PostgreSQL materialized temporal summary** | Future: materialized view of date distributions | For pre-aggregated year/month counts |
-
-### 17.2 Client-Side
-
-| Technique | Application | Target |
-|---|---|---|
-| **Debounced map sync** | 300 ms debounce on map extent change events | Prevents API flood during pan |
-| **Virtual scrolling** | Timeline at week+/day zoom uses virtual list | Only render visible markers |
-| **Clustering** | API-level aggregation at low zoom levels (decade/year/month) | Minimizes DOM nodes |
-| **Lazy loading** | Fetch individual resource data only when zoomed in to week/day | Avoids 10K marker renders |
-| **Code splitting** | Timeline components loaded via `React.lazy()` | Keep initial bundle small |
-| **Memoization** | `React.memo` on TimelineMarker, CalendarDay | Avoid re-render of unchanged markers |
-
-### 17.3 Pre-rendering Budget
-
-| Zoom Level | Max Visible Markers | Render Strategy |
-|---|---|---|
-| Decade | ~10 clusters (one per year) | API aggregation + cluster elements |
-| Year | ~12 clusters (one per month) | API aggregation + cluster elements |
-| Month | ~30-31 markers or ~5 week clusters | API aggregation, virtual scroll |
-| Week | ~7 markers | Individual resource data, virtual scroll |
-| Day | Variable (depends on resources) | Individual resource data, virtual scroll |
-
----
-
-## 18. Scalability Strategy
-
-### 18.1 Catalog Growth
-
-**0 – 1,000 resources**: No special handling needed. All markers can render individually.
-
-**1,000 – 10,000 resources**: API aggregation at decade/year/month zoom. Virtual scrolling at week/day zoom. AC-08 certifies this range.
-
-**10,000 – 100,000 resources**: Same strategy, but API aggregation becomes essential even at week zoom. May require additional database tuning:
-- Partition `metadata` table by key prefix
-- Add BRIN index on metadata value (date-sorted data)
-- Increase Redis cache TTL for aggregation results
-
-**> 100,000 resources**: Future consideration. Options include:
-- Server-side tile generation for timeline (pre-rendered timeline tiles)
-- Materialized views with periodic refresh
-- Dedicated temporal search index (Elasticsearch)
-
-### 18.2 Concurrent Users
-
-- Aggregation endpoint is read-only and primarily serves cached data
-- Concurrent panning of the same area hits the Redis cache
-- Worst-case: 10 users panning different areas simultaneously generates 10 unique aggregation queries per second → database handles without issue at 10K scale
-
----
-
-## 19. Security Considerations
-
-| Concern | Mitigation |
-|---|---|
-| **Permission enforcement** | All temporal aggregation queries MUST respect resource permissions. Aggregation counts should only include resources the current user can view. The search API already enforces this; extend the same permission filter to temporal endpoints. |
-| **Information leakage via temporal aggregation** | Bucket counts could reveal existence of sensitive resources in a date range even if user cannot see individual resources. Mitigation: aggregation counts must respect the same permission filters as search. Empty buckets for which the user has no access are excluded, not returned as zero. |
-| **Date injection** | `date_from` / `date_to` parameters validated as ISO 8601 dates. Reject non-date values with 400 Bad Request. |
-| **Bounding box injection** | `bbox` parameter validated as 4 comma-separated float values within valid coordinate ranges (-180 to 180, -90 to 90). |
-| **Rate limiting** | Temporal aggregation endpoint should respect existing API rate limits. Aggressive map panning is debounced client-side. |
-
----
-
-## 20. Failure Scenarios and Recovery
-
-| Scenario | Impact | Mitigation | Recovery |
-|---|---|---|---|
-| **Aggregation API timeout (> 5 s)** | Timeline shows empty/loading | Client-side timeout of 5 s; show partial results if any. | Retry with exponential backoff once. |
-| **MapStore API unavailable** | No map bounds for timeline filter | Timeline loads without spatial filter (shows all resources). | Auto-retry MapStore connection every 2 s. |
-| **Date parse failure for resource** | Single resource missing from timeline | Skip resource with console warning. Log metric for monitoring. | Data manager fixes date format via F-004. |
-| **Animation frame render > 500 ms** | Choppy animation | Skip frames to maintain target fps. Auto-reduce step size. | User can slow speed slider. |
-| **Memory exceeded for 10K markers** | Browser tab crash | Clustering + virtual scrolling limits DOM nodes to < 500 visible. | Fallback: Degrade to yearly aggregation only. |
-| **Metadata service returns 500** | Timeline cannot determine dates | Timeline shows "Metadata unavailable" message. | Auto-retry on next interaction. |
-| **PostGIS query for bbox is slow** | Slow timeline response after map pan | Add GiST index on resource geometry if not present. Bbox query joins metadata + resource tables, optimize with subquery. | Already mitigated by debounce + caching. |
-
----
-
-## 21. Observability
-
-### 21.1 Metrics
-
-| Metric | Source | Purpose |
-|---|---|---|
-| `temporal_aggregation.duration_ms` | API middleware | Monitor aggregation query performance |
-| `temporal_aggregation.cache_hit_ratio` | Redis cache | Track cache effectiveness |
-| `timeline.render_time_ms` | Frontend performance API | Track client-side render time (AC-08) |
-| `timeline.marker_count` | Frontend | Track how many markers are rendered |
-| `timeline.animation_fps` | Frontend `requestAnimationFrame` callback | Monitor animation smoothness |
-| `timeline.api_error_count` | Frontend error boundary | Track API failures |
-
-### 21.2 Logging
-
-- All temporal API requests logged at `INFO` level with duration and parameters
-- Date parse failures logged at `WARN` level with resource ID
-- Cache misses logged at `DEBUG` level
-- Animation performance drops (< 10 fps) logged as `WARN` in browser console
-
-### 21.3 Error Boundaries
-
-- React error boundary around `TimelineView` — if timeline crashes, the error boundary displays "Timeline unavailable" without breaking the rest of the page
-- Separate error boundary around `CalendarView`
-- Separate error boundary around `AnimationControls`
-
----
-
-## 22. Migration and Backward Compatibility
-
-### 22.1 API Backward Compatibility
-
-- Existing `GET /api/search/` endpoint continues to work unchanged. New `date_*` query parameters are optional.
-- New `temporal_facets` and `temporal_summary` fields added to search response. Existing clients ignore unknown fields.
-- New endpoint `/api/search/temporal-aggregation/` is additive; no existing endpoint is modified.
-
-### 22.2 Frontend Backward Compatibility
-
-- Timeline is visually hidden by default (toggled via toolbar button)
-- Existing search and map flows are completely unaffected when timeline is hidden
-- Adding timeline components does not change existing page layouts
-
-### 22.3 Date Data Migration
-
-- Existing resources without temporal metadata will use `Resource.created_at` as fallback
-- A management command `migrate_temporal_metadata` can be provided to:
-  1. Scan all resources
-  2. For resources with `temporal.acquisition_date` in files (extracted during upload by F-003), populate the metadata key
-  3. Report resources that lack any temporal data
-
-### 22.4 Feature Flagging
-
-Add a `FEATURE_TIMELINE_ENABLED` Django setting (default: `True`) that conditionally:
-- Registers the temporal aggregation API routes
-- Controls visibility of timeline UI elements
-
-This allows operators to disable the feature entirely without code changes.
-
----
-
-## 23. Engineering Scenarios
-
-### 23.1 Normal Operation
-
-**Input**: User opens search page with 500 resources, each having `temporal.acquisition_date` populated.
-**Flow**: API aggregation returns 12 monthly buckets in < 50 ms. Timeline renders 12 clusters. Calendar shows 200+ day cells.
-**Expected behavior**: Timeline renders in < 500 ms. FPS > 30 during animation. Map sync completes in < 200 ms.
-
-### 23.2 Expected Scale (1,000 – 10,000 resources)
-
-**Input**: 5,000 resources with dates spanning 5 years.
-**Flow**: API aggregation returns 60 monthly buckets. At year zoom: 5 clusters. At month zoom: 60 clusters. At day zoom: ~1,800 individual dates (but only visible range ~30 days via virtual scrolling).
-**Expected behavior**: Aggregation query < 200 ms. Timeline render < 1 s (AC-08). Animation at 15+ fps for day-step playback.
-
-### 23.3 Extreme but Plausible Scale (50,000 resources)
-
-**Input**: 50,000 resources, all dated, spanning 10 years.
-**Flow**: API aggregation at year zoom: 10 clusters. Month zoom: 120 clusters. Day zoom: ~3,600 days with resources.
-**Expected behavior**: Aggregation query < 1 s (with index). Timeline render < 1.5 s (clustered). Day-zoom virtual scroll essential. Animation at 8+ fps. Consider increasing cache TTL.
-
-### 23.4 Concurrency — Rapid Map Panning
-
-**Input**: User rapidly pans map across large area (5+ extent changes in 2 seconds).
-**Flow**: Each pan triggers debounced API call. Only the last call after 300 ms debounce executes. Cache hit likely if same area revisited.
-**Expected behavior**: No more than 1 API call per 300 ms. Cache hit ratio > 80% for adjacent pans. No API overload.
-
-### 23.5 Dependency Failure — MapStore Unavailable
-
-**Input**: MapStore fails to load (CDN failure, JavaScript error).
-**Flow**: `useMapSync` detects MapStore API is unavailable. Timeline loads in standalone mode (no spatial filter).
-**Expected behavior**: Timeline renders all resources. Map area shows "Map unavailable" placeholder. Timeline still fully functional for browsing.
-
-### 23.6 Permission Failure — Unauthorized Temporal Request
-
-**Input**: Unauthenticated user accesses temporal aggregation endpoint.
-**Flow**: DRF permission classes reject with 401 Unauthorized.
-**Expected behavior**: Timeline shows login prompt. Calendar does not render. Map shows public resources only.
-
-### 23.7 Invalid Input — Malformed Date Filter
-
-**Input**: User (or attacker) sends `date_from=not-a-date` to temporal aggregation endpoint.
-**Flow**: DRF serializer validates ISO 8601 format. Validation fails → 400 Bad Request with error message.
-**Expected behavior**: Timeline shows error state: "Invalid date filter". Does not crash. Previous valid state retained.
-
-### 23.8 Malicious Usage — Aggregation Probing
-
-**Input**: Attacker cycles through date_from/date_to values to deduce temporal distribution of private resources.
-**Flow**: Permission filters still apply. Aggregation counts only include resources the attacker can view. No information leakage beyond what search already exposes.
-**Expected behavior**: Attacker sees same data they would see through the search API. No additional information revealed.
-
-### 23.9 Partial Failure — Metadata Service Degraded
-
-**Input**: Metadata database replica is under load, queries take 5+ seconds.
-**Flow**: API timeout (set at 3 s) triggers. Request returns 503 or partial results.
-**Expected behavior**: Timeline shows "Temporal data temporarily unavailable" message. Existing map and search remain functional. Auto-retry in 30 seconds.
-
-### 23.10 Recovery — Redis Cache Flush
-
-**Input**: Redis cache is flushed (deployment, maintenance).
-**Flow**: Temporal aggregation cache keys are all empty. First request after flush hits database directly.
-**Expected behavior**: Slightly slower response (< 500 ms vs < 50 ms cached). Subsequent requests repopulate cache. No user-visible difference beyond brief load time.
-
----
-
-## 24. Technical Risks
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| **vis-timeline library performance with 10K+ markers** | Medium | High — janky UI | Clustering at API level limits markers to < 100 in most views; virtual scrolling at day zoom |
-| **MapStore CQL filter API insufficient for animation** | Medium | High — animation requires map layer reload per frame | Fallback to URL-based layer reload; animation step size matches render budget |
-| **Temporal metadata inconsistency across resources** | High | Medium — some resources missing from timeline | Fallback chain (acquisition → creation → created_at); clear user notice for undated resources |
-| **Browser tab CPU throttling during animation** | Low | Medium — animation slows when tab backgrounded | Pause animation when page visibility changes (Page Visibility API) |
-| **Time zone confusion leads to date shifting** | Medium | Medium — resources shown on wrong day | All dates stored in UTC; display in user's timezone; clear timezone indicator in UI |
-| **PostgreSQL date_trunc performance on key-value metadata** | Medium | Medium — slow aggregation queries | Composite index on metadata key-value; consider date type column for temporal metadata in future |
-
----
-
-## 25. Required ADRs
-
-### ADR-REQ-F022-001: Temporal Metadata Key Conventions
-
-**Reason required**: The flexible metadata model (ADR-006) allows arbitrary keys. Without a convention, resource dates will be inconsistent across uploads, making the timeline unreliable.
-
-**Decision impact**: All resource uploads and metadata editing must use the documented key scheme.
-
-**Alternatives**:
-1. Add `acquisition_date` and `creation_date` as explicit columns on the Resource model — rejected because it conflicts with ADR-006 (flexible metadata) and would require a model migration
-2. Use JSONField on Resource for temporal metadata — rejected because it's harder to index for aggregation queries
-
-**Recommended direction**: Adopt the key convention defined in §13.2. Enforce at the application level (metadata validation hooks).
-
-**Approval status**: **Pending** — requires human review.
-
----
-
-### ADR-REQ-F022-002: Timeline Rendering Technology
-
-**Reason required**: The choice of timeline library determines client bundle size, maintainability, and performance characteristics.
-
-**Decision impact**: Bundle size increases by ~150 KB (gzipped) if vis-timeline is used. Custom implementation avoids the dependency but costs 2-3 weeks of development.
-
-**Alternatives**:
-1. vis-timeline (community edition, MIT) — selected for maturity and built-in features
-2. Custom d3 implementation — rejected for high development cost
-3. Custom canvas implementation — rejected for accessibility and maintainability concerns
-
-**Recommended direction**: vis-timeline community edition with code splitting.
-
-**Approval status**: **Pending** — requires human review.
-
----
-
-### ADR-REQ-F022-03: Temporal Aggregation at API Level
-
-**Reason required**: Clustering/aggregation strategy determines server load, API contract, and timeline scalability.
-
-**Decision impact**: All temporal data for timeline goes through a single aggregation endpoint. Client-side clustering is a fallback for zoom transitions.
-
-**Alternatives**:
-1. Client-side clustering only — requires fetching all dates, memory-intensive at 10K+
-2. Pre-computed materialized views — optimal performance but adds schema complexity
-3. API-level SQL aggregation with caching — selected for balance of performance and simplicity
-
-**Recommended direction**: Implement aggregation endpoint with `date_trunc` in PostgreSQL and Redis caching.
-
-**Approval status**: **Pending** — requires human review.
-
----
-
-## 26. Engineering Assumptions
-
-| ID | Assumption | Rationale | Testability | Fallback |
+- **Stack constraint:** Django 5, DRF, PostgreSQL/PostGIS, React/TypeScript, Material UI (per PROJECT_FACTS.md).
+- **Metadata constraint:** Temporal dates are stored in the key-value Metadata model (ADR-006). Querying requires filtering on metadata rows.
+- **Permission constraint:** All aggregation must filter by the requesting user's effective permissions. This is a non-negotiable security requirement.
+- **Modular monolith:** No new microservices. All new code lives within the existing Django project structure.
+- **URL state constraint:** Temporal filter parameters must integrate with the existing search URL scheme (FR-F022-009).
+- **Accessibility constraint:** Temporal UI controls must be keyboard-operable and screen-reader compatible (per spec Section 16).
+
+## 7. Technical Decisions and Alternatives
+
+### TD-F022-001 — Timeline aggregation strategy
+
+**Context:** The timeline histogram shows Resource counts per temporal interval (year, quarter, month, day). For large catalogs, pre-computing all possible aggregations is expensive; computing on every request is also expensive.
+
+**Selected approach:** Query-time aggregation using Django ORM with a server-side Redis cache keyed by `{temporal_field}_{interval}_{permission_fingerprint}`. The cache TTL is 5 minutes and is invalidated when Resources with temporal metadata are created, updated, or deleted.
+
+**Alternatives considered:**
+- Pre-computed materialized aggregate table: More complex, requires triggers/maintenance, but faster reads. Rejected due to added schema complexity for the initial implementation.
+- Client-side aggregation: Infeasible for large catalogs (could pull all dates to the browser).
+- Database materialized views: PostgreSQL materialized view with periodic refresh — viable future optimization if cache proves insufficient.
+
+**Technical rationale:** Query-time aggregation with ORM `.annotate()` + `.values()` + `.order_by()` is well-supported by PostgreSQL and Django. Redis caching absorbs repeated requests during browsing. For 100,000 Resources, the aggregation query executes in under 500ms on indexed metadata rows. The cache layer keeps perceived latency under the 3-second product constraint.
+
+**Consequences:** Redis dependency for cache; metadata table index required on `(key, value)` for temporal field queries; cache invalidation must cover all affected users when permissions change.
+
+### TD-F022-002 — Temporal filter state management
+
+**Context:** The temporal filter must synchronize the timeline UI, the map preview, the resource list, and URL parameters simultaneously.
+
+**Selected approach:** A shared React context (`TemporalFilterContext`) that holds the current filter state: `{ attribute: "temporal:acquisition_date", startDate, endDate, animation: { playing, speed, currentStep } }`. The context provider wraps the search/explore page. Filter changes dispatch state updates that trigger API re-fetches and URL parameter updates via `useSearchParams` from React Router.
+
+**Alternatives considered:**
+- Redux store: Overkill for this feature; the filter state is simple and component-localized.
+- Prop drilling: Too many levels between the timeline, map, and search components.
+- URL-only state: Cannot track animation state (playing, speed) in clean URL parameters.
+
+**Technical rationale:** React Context with `useReducer` provides a clean, testable state container. URL parameters are the source of truth for initial page load and bookmarking. Context bridges the gap for transient animation state that should not appear in URLs.
+
+**Consequences:** Components consuming the context must handle undefined/initial state gracefully. URL parameters must be parsed and validated on page load.
+
+### TD-F022-003 — Temporal attribute configuration
+
+**Context:** Administrators must configure which temporal metadata fields are available for timeline exploration (EAF-F022-003). This cannot require code changes.
+
+**Selected approach:** A Django database model `TemporalAttributeConfig` stores available temporal field keys with display labels and a flag for default selection. An admin API endpoint (read-only for regular users, read-write for administrators) exposes the configuration. The config is cached in Redis.
+
+**Alternatives considered:**
+- Django settings constant: Requires code deployment to change. Rejected.
+- Django admin-only configuration (no API): Acceptable for admin users but prevents future headless configuration. Selected approach is more flexible.
+- Hard-coded field list: Violates the product constraint for no-code changes.
+
+**Technical rationale:** A database-backed configuration model allows administrators to add new temporal fields (e.g., `temporal:publication_date`) through the Django admin interface or an admin API without deployment. The cache ensures the timeline component loads configuration quickly.
+
+**Consequences:** Extends the data model with a new `TemporalAttributeConfig` table. Migration required. Migrating existing metadata to recognized temporal keys is a data stewardship task, not a migration.
+
+### TD-F022-004 — Animation playback mechanism
+
+**Context:** Temporal animation steps through time intervals, updating the map and resource list at each step.
+
+**Selected approach:** Client-side interval stepping using `requestAnimationFrame` for smooth map rendering. The animation controller stores the current step index, interval boundaries, and speed. At each step, it updates the `TemporalFilterContext` with a new date range (one interval wide), triggering a map preview re-fetch. The animation is purely client-side — no server-side animation state.
+
+**Alternatives considered:**
+- Server-side animation frames: Pre-rendered frame data — complex, unnecessary for this feature.
+- Server-sent events for animation pushes: Over-engineered for step-through animation.
+- CSS keyframe animation: Not applicable; map data changes require API calls.
+
+**Technical rationale:** `requestAnimationFrame` with a timestamp accumulator controls step timing. Each step fires a context update that narrows the current date range to one interval. The map preview receives the new range and re-queries. The resource list debounces updates to avoid flickering. Animation is stateless from the server's perspective.
+
+**Consequences:** Animation quality depends on the map preview's ability to render frames within the step interval. Users on slow connections may see lag between steps; the step-forward/step-backward manual mode provides an alternative.
+
+## 8. Component Design
+
+### CMP-F022-001 — Temporal Aggregation Service (Backend)
+
+**Type:** New Django application module (`timelines`)
+
+**Responsibility:**
+- Aggregates Resource counts per temporal interval for the histogram
+- Returns the distribution of Resources across time for a given temporal attribute
+- Respects permission filtering
+- Caches aggregation results in Redis
+
+**Inputs and outputs:**
+- Input: `temporal_attribute_key` (str), `interval` (year|quarter|month|day), `user` (permission context)
+- Output: `{ intervals: [{ label: "2026-01", count: 42, has_data: true }, ...], total_count: number, date_range: { min, max } }`
+
+**State and data ownership:**
+- Owns the aggregation query logic
+- Owns the Redis cache namespace `timeline:agg:*`
+- Does not own any persistent database tables beyond TemporalAttributeConfig
+
+**Dependencies:**
+- `resources` module: Resource model for querying
+- `metadata` module: Metadata model for temporal key-value filtering
+- `permissions` module: Permission filtering for resource access
+- `config` module: TemporalAttributeConfig for field definitions
+
+**Failure boundary:**
+- Cache miss → fall through to database query
+- Database query timeout → return 503 with retry-after header
+- Cache outage → operation degrades to database query only
+
+**Reuse rationale:** New component — no existing component provides temporal aggregation.
+
+### CMP-F022-002 — GeoTimeline UI (Frontend)
+
+**Type:** New React component set
+
+**Responsibility:**
+- Renders the timeline strip with histogram bars
+- Provides drag-to-select date range on the timeline
+- Provides calendar date-range picker component
+- Provides animation playback controls (play, pause, stop, speed)
+- Provides temporal attribute selector dropdown
+- Renders empty/populated interval distinction
+
+**Inputs and outputs:**
+- Input: aggregation data from API, filter state from TemporalFilterContext
+- Output: dispatches filter state changes to TemporalFilterContext
+
+**State and data ownership:**
+- Owns the visual state of the timeline (hovered interval, drag selection, animation timer)
+- Owns animation playback state (running, paused, current step, speed)
+- Does not own the source data (fetched from API)
+
+**Dependencies:**
+- `@mui/material` components for date pickers, dropdowns, buttons
+- `TemporalFilterContext` for filter state
+- `recharts` or custom SVG for histogram bars
+- `@react-spring/web` or `requestAnimationFrame` for animation timing
+
+**Failure boundary:**
+- If aggregation API fails → show empty timeline with retry button, do not block map or search
+- If animation encounters error → stop animation, show error notification
+- All timeline UI failures are isolated; the search page remains functional
+
+**Reuse rationale:** New component — no existing timeline component in the platform.
+
+### CMP-F022-003 — TemporalFilterContext (Frontend)
+
+**Type:** New React context provider
+
+**Responsibility:**
+- Holds the current temporal filter state
+- Provides dispatch actions for setting date range, changing attribute, clearing filter, animation control
+- Reads and writes URL query parameters (`temporal_from`, `temporal_to`, `temporal_attr`, `temporal_interval`)
+- On mount, initializes filter state from URL parameters
+
+**Inputs and outputs:**
+- Input: URL query parameters (on mount), dispatch actions from UI components
+- Output: filter state to consuming components (timeline, map preview, search)
+
+**State and data ownership:**
+- Owns the filter state object
+- Owns URL parameter synchronization
+
+**Dependencies:**
+- `react-router-dom` `useSearchParams`
+- `useReducer` for state transitions
+
+**Failure boundary:**
+- Invalid URL parameters (e.g., date in wrong format) → fall back to unfiltered state, log warning
+- Context error → isolated; map and search operate without temporal filter
+
+**Reuse rationale:** New component — no existing mechanism for cross-component temporal filter state.
+
+### CMP-F022-004 — Temporal Filter API Integration (Backend)
+
+**Type:** Extension of existing `search` module
+
+**Responsibility:**
+- Adds temporal filter query parameters to the Resource Search API
+- Filters Resource search results by temporal metadata date range
+- Respects all existing search filters, pagination, and permissions
+
+**Inputs and outputs:**
+- Input: `temporal_attr` (str), `date_from` (ISO date), `date_to` (ISO date)
+- Output: Filtered search results (paginated)
+
+**State and data ownership:**
+- No new state; extends existing search query logic
+
+**Dependencies:**
+- `search` module: existing search Views and serializers
+- `metadata` module: Metadata model for temporal key filtering
+- `permissions` module: permission enforcement
+
+**Failure boundary:**
+- Invalid temporal attribute → return 400 with field validation error
+- Missing metadata index → slow query; operation degrades
+
+**Reuse rationale:** Extends the existing search module rather than creating a separate search endpoint.
+
+## 9. Data Model Changes
+
+### DM-F022-001 — Temporal attribute configuration table
+
+**Type:** New database table
+
+**Entity:** `TemporalAttributeConfig`
+
+| Field | Type | Nullable | Default | Description |
 |---|---|---|---|---|
-| EA-01 | MapStore exposes map extent via JavaScript API | F-009 documentation indicates MapStore has a public API | Can be verified by inspecting MapStore integration code | Read extent from URL parameters |
-| EA-02 | MapStore supports CQL (Contextual Query Language) filters on layers | Standard GeoServer + MapStore feature | Verify with MapStore admin documentation | Use URL-based layer reload per frame |
-| EA-03 | Average temporal metadata coverage is > 80% for uploaded resources | F-003 metadata extraction populates acquisition_date for geospatial files | Can be measured from production data | Fallback to created_at; bulk migration tool |
-| EA-04 | Users primarily interact with timeline at month/year zoom levels | Day-level browsing is edge case for most users | Can be validated via usage analytics | Optimize for month/year; day/week is progressive enhancement |
-| EA-05 | Maximum animation range is 10 years (3,650 day-frames max) | Practical limit for geospatial time series | Configurable constant (can be adjusted) | Animation range capped at backend level, warn user if exceeded |
-| EA-06 | vis-timeline community edition remains MIT-licensed | vis.js was relicensed to MIT in community fork | Verify license in package.json | Switch to custom lightweight implementation as fallback |
-| EA-07 | Browser supports `requestAnimationFrame` and `Page Visibility API` | Target is modern browsers (Chrome, Firefox, Safari, Edge) | Feature-detect in component | Fall back to `setTimeout`-based animation loop |
+| id | UUID (PK) | No | auto | Primary key |
+| metadata_key | VARCHAR(255) | No | — | Metadata key (e.g., "temporal:acquisition_date") |
+| display_label | VARCHAR(255) | No | — | Human-readable label (e.g., "Acquisition Date") |
+| is_default | BOOLEAN | No | False | Whether this is the default timeline attribute |
+| is_active | BOOLEAN | No | True | Whether this attribute is available for selection |
+| sort_order | INTEGER | No | 0 | Display ordering |
+| created_at | DATETIME | No | auto | Creation timestamp |
 
----
+**Invariants and validation:**
+- `metadata_key` must be unique
+- Exactly one active config may have `is_default = True` (enforced at application level)
+- `metadata_key` must match the key format used in Metadata model
 
-## 27. Human Technical Decisions
+**Relationships and lifecycle:**
+- No foreign key relationship to Metadata (metadata_key is a logical reference)
+- Created and managed through Django admin or admin API
+- Deactivation is soft (is_active = False) to preserve historical configuration
 
-These decisions are reserved for human engineering leadership:
+**Indexes:**
+- Unique index on `metadata_key`
+- Index on `is_active` (for querying available fields)
 
-| ID | Decision | Options | Recommended | Rationale |
-|---|---|---|---|---|
-| HTD-01 | **Default timeline date field** | (a) `acquisition_date`, (b) `creation_date`, (c) `created_at` | `acquisition_date` with configurable fallback chain | Aligns with user expectation — acquisition date is the semantically meaningful date |
-| HTD-02 | **Resource types included in animation** | (a) All resource types with dates, (b) Raster/imagery only | All resource types with dates | Simpler model; animation filters map by time, not by type |
-| HTD-03 | **Calendar density display** | (a) Resource count per day, (b) Binary indicator | Resource count with color intensity scale | More informative; matches user story about coverage gaps |
-| HTD-04 | **Maximum animation date range** | (a) No limit, (b) 1 year, (c) 5 years, (d) 10 years | 10 years (configurable) | Practical limit; prevents accidental memory overload |
-| HTD-05 | **Feature flag name and default** | Name + default value | `FEATURE_TIMELINE_ENABLED = True` | Off-by-default risks low adoption; on-by-default with quick rollback |
+**Retention and deletion:**
+- Records are never hard-deleted from application logic; marked `is_active = False`
 
----
+**Migration and backfill constraints:**
+- Initial migration creates the table with seed records for common temporal fields (acquisition_date, creation_date, publication_date)
+- No existing data migration required — the table references metadata keys, not specific Resource data
 
-## 28. Open Technical Questions
+### DM-F022-002 — Metadata temporal keys naming convention
 
-| Q# | Question | Impact | Suggested Resolution Path |
-|---|---|---|---|
-| OQ-01 | Should MapStore synchronization use URL-based layer filtering (simpler) or the CQL filter API (more flexible)? | Animation performance, sync latency | Prototype both approaches in a trace spike during Milestone 1 |
-| OQ-02 | How should the timeline handle leap seconds, calendar reforms, or dates before 1970? | Date edge cases | Use standard JavaScript `Date` (epoch-based); pre-1970 dates are valid ISO 8601 strings; no special handling needed for initial implementation |
-| OQ-03 | Should the timeline panel be docked (fixed below search bar) or floating (collapsible drawer)? | UX, implementation effort | Docked panel below search bar, collapsible with toggle button; matches existing layout patterns |
-| OQ-04 | Should animation export (GIF/video) be scaffolded in v1 even though it's out of scope? | Future effort | No — defer per feature spec §5. Design animation engine so that frame capture can be added later via a `FrameCapturePlugin` interface |
+**Type:** Index and naming convention (no new table)
 
----
+A consistent naming convention for temporal metadata keys:
 
-## 29. Readiness Review
-
-| Criterion | Status |
-|---|---|
-| Source Feature Specification validated | ✓ (Draft — "Ready for Technical Planning" marker pending) |
-| Requirements traced to design | ✓ (See §8) |
-| Architecture alignment verified | ✓ (See §4) |
-| Reuse analysis completed | ✓ (See §9) |
-| Components defined | ✓ (See §11) |
-| Interfaces defined | ✓ (See §14) |
-| Data model changes defined | ✓ (See §13 — no new tables, key conventions only) |
-| API design complete | ✓ (See §14) |
-| Storage strategy defined | ✓ (See §16) |
-| Performance reviewed | ✓ (See §17) |
-| Scalability reviewed | ✓ (See §18) |
-| Security reviewed | ✓ (See §19) |
-| Failure scenarios evaluated | ✓ (See §20, §23) |
-| Observability defined | ✓ (See §21) |
-| Migration considered | ✓ (See §22) |
-| Technical risks documented | ✓ (See §24) |
-| Blocking Human Technical Decisions resolved | **No** — 5 Human Technical Decisions pending approval (See §27) |
-| Required ADR approvals completed | **No** — 3 ADRs pending approval (See §25) |
-
-**Ready for Task Planning**: **NO**
-
-**Blocks**:
-1. Feature Specification requires "Ready for Technical Planning: YES" marker (status is currently "Draft")
-2. 3 ADRs require human approval (ADR-REQ-F022-001, ADR-REQ-F022-002, ADR-REQ-F022-003)
-3. 5 Human Technical Decisions require resolution (HTD-01 through HTD-05)
-
----
-
-## Appendix A: Implementation Milestone Breakdown
-
-The following is a suggested implementation order. This is **informative** for task planning (AGENT-104) and not prescriptive.
-
-| Phase | Components | Effort | Dependencies |
-|---|---|---|---|
-| **M1 — Foundation** | Temporal key conventions, DB index, temporal metadata validation | Small | F-004 (Metadata), F-003 |
-| **M2 — API** | Temporal aggregation endpoint, search extension, permission integration | Medium | F-005 (Search), M1 |
-| **M3 — Timeline View** | TimelinePanel, TimelineView, TimelineToolbar, clustering, tooltips | Large | M2, vis-timeline library |
-| **M4 — Calendar View** | CalendarView, CalendarGrid, CalendarDay, density heatmap | Medium | M2 |
-| **M5 — Map Sync** | useMapSync hook, debounced extent sync, timeline-selection filter for map | Medium | M3, F-009 (Map) |
-| **M6 — Animation** | AnimationControls, useAnimationEngine, speed/direction controls | Medium | M5 |
-| **M7 — Search Integration** | TemporalSearchFacet, search result timeline summary, facet wiring | Small | M2, M3, F-005 |
-| **M8 — Polish** | Performance tuning for 10K, error states, loading skeletons, accessibility, bulk date management tool | Medium | M3-M7 |
-
-### Effort Estimates
-
-| Phase | Effort | Person-Days (approx.) |
+| Canonical Key | Display Label | Data Type |
 |---|---|---|
-| M1 — Foundation | Small | 2–3 |
-| M2 — API | Medium | 5–7 |
-| M3 — Timeline View | Large | 10–15 |
-| M4 — Calendar View | Medium | 5–7 |
-| M5 — Map Sync | Medium | 5–8 |
-| M6 — Animation | Medium | 5–7 |
-| M7 — Search Integration | Small | 3–5 |
-| M8 — Polish | Medium | 5–8 |
-| **Total** | | **40–60 person-days** |
+| temporal:acquisition_date | Acquisition Date | date |
+| temporal:creation_date | Creation Date | date |
+| temporal:publication_date | Publication Date | date |
+| temporal:capture_start | Capture Start | datetime |
+| temporal:capture_end | Capture End | datetime |
+
+**Index strategy:**
+- Composite index on `Metadata(resource_id, key, value)` for efficient temporal queries
+- Existing metadata table already has indexes; verify coverage for `(key, value)` queries
+
+**Lifecycle:**
+- Keys are defined in TemporalAttributeConfig
+- Resources store temporal values with these keys in Metadata table
+- No automated migration of existing metadata to use canonical keys — handled by data stewardship
+
+## 10. API Design
+
+### API-F022-001 — Timeline Aggregation Endpoint
+
+**Purpose:** Returns temporal distribution data for the timeline histogram.
+
+**Consumers:** `GeoTimeline` frontend component.
+
+**Operation:** `GET /api/timeline/aggregate/`
+
+**Query parameters:**
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `temporal_attr` | string | No | Default from config | Metadata key for the temporal field |
+| `interval` | enum | No | "month" | Aggregation interval: "year", "quarter", "month", "day" |
+| `date_from` | ISO date | No | — | Inclusive lower bound for aggregation range |
+| `date_to` | ISO date | No | — | Inclusive upper bound for aggregation range |
+
+**Response (200):**
+```json
+{
+  "intervals": [
+    {"label": "2026-01", "count": 42, "has_data": true},
+    {"label": "2026-02", "count": 15, "has_data": true},
+    {"label": "2026-03", "count": 0, "has_data": false}
+  ],
+  "total_in_range": 57,
+  "date_range": {"min": "2024-01-01", "max": "2026-12-31"},
+  "attribute": "temporal:acquisition_date",
+  "interval": "month"
+}
+```
+
+**Validation:**
+- `temporal_attr` must match an active TemporalAttributeConfig metadata_key (400 if invalid)
+- `interval` must be one of the enum values (400 if invalid)
+- `date_from` and `date_to` must be valid ISO dates if provided (400 if invalid)
+- If `date_from > date_to`, return 400
+
+**Authorization:**
+- Authenticated users see their permitted Resources; anonymous users see public Resources only
+- Aggregation counts reflect only Resources the user is authorized to VIEW
+- Uses the existing `permissions` module to filter visible Resource IDs before aggregation
+
+**Pagination, filtering, ordering, and limits:**
+- Not paginated (aggregation response is bounded by distinct intervals — max ~3650 for daily intervals over 10 years)
+- Maximum date range returned: configurable (default: 100 years). Query parameter range beyond this returns a 400 error.
+
+**Idempotency and concurrency:**
+- GET is idempotent
+- Cached in Redis; concurrent requests for the same parameters hit the cache
+
+**Error contract:**
+- 400: Invalid parameters (with field-level error details)
+- 401: Authentication required (if anonymous access is disabled)
+- 503: Aggregation service unavailable (database timeout)
+
+**Compatibility:**
+- New endpoint; no backward compatibility concern
+
+### API-F022-002 — Temporal Filtered Search (Extension)
+
+**Purpose:** Extends the existing Resource Search API with temporal filter parameters.
+
+**Consumers:** Resource search UI (F-005), map preview (F-009).
+
+**Operation:** `GET /api/resources/` (existing search endpoint)
+
+**Extended query parameters:**
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `temporal_attr` | string | No | — | Metadata key for the temporal field filter |
+| `date_from` | ISO date | No | — | Inclusive lower bound |
+| `date_to` | ISO date | No | — | Inclusive upper bound |
+
+**Behavior:**
+- When `temporal_attr` is provided with at least one of `date_from`/`date_to`, the search results are filtered to Resources whose metadata row with `key = temporal_attr` has a date value in the specified range
+- The temporal filter is combined with existing search parameters via AND logic
+- When `temporal_attr` is omitted but date parameters are present, the default temporal attribute from configuration is used
+
+**Authorization:**
+- Inherits existing search permission filtering
+- Does not bypass existing permission checks
+
+**Compatibility:**
+- Backward-compatible: existing API consumers without temporal parameters experience no change
+- New query parameters are ignored when not provided
+
+## 11. Integration Points
+
+### INT-F022-001 — Timeline to Search Integration
+
+**Systems involved:** `GeoTimeline` (frontend) → `TemporalFilterContext` → Resource Search API
+
+**Contract and ownership:**
+- `TemporalFilterContext` holds filter state
+- Resource search reads filter state from context and constructs API query parameters
+- The search component re-fetches when filter state changes
+
+**Direction and timing:**
+- Timeline UI dispatches action → Context updates state → Search component re-renders → API call fires
+- Debounce: 300ms after last filter change before search API call
+
+**Consistency expectations:**
+- Eventual consistency between timeline selection and search results (debounce delay)
+- Strong consistency between context state and URL parameters (synchronous update)
+
+**Timeout, retry, and idempotency:**
+- Search API calls use existing retry/timeout configuration
+- Temporal filter calls are idempotent (same parameters produce same results)
+
+**Failure isolation:**
+- If search API fails, the timeline histogram remains visible with the selected date range highlighted
+- User can still browse the timeline even when search results fail to load
+
+### INT-F022-002 — Timeline to Map Preview Integration
+
+**Systems involved:** `TemporalFilterContext` → 2D Map Preview (F-009)
+
+**Contract and ownership:**
+- Map Preview component subscribes to `TemporalFilterContext` for temporal filter state
+- Map Preview filters its rendered Resource extents/markers client-side or re-fetches with temporal parameters
+
+**Direction and timing:**
+- Filter state change → Map Preview receives new props → Re-renders with filtered data
+- No additional debounce for map; map updates immediately on filter change
+
+**Consistency expectations:**
+- Strong: map must always reflect the current temporal filter state
+- If map data is still loading from a previous filter change, the new filter supersedes it (abort previous request)
+
+**Failure isolation:**
+- If map preview fails to load filtered data, show empty map with loading error
+- Timeline and search remain functional independently
+
+## 12. Storage Strategy
+
+**Storage class and ownership:**
+- Temporal attribute configuration data: PostgreSQL, owned by `timelines` module via `TemporalAttributeConfig` model
+- Temporal metadata values: PostgreSQL, owned by `metadata` module via existing `Metadata` model
+- Aggregation cache: Redis, managed by `timelines` module
+
+**Expected data lifecycle:**
+- Configuration data: Rarely changed (administrator action), retained indefinitely
+- Metadata values: Created/updated with Resource metadata lifecycle (F-004)
+- Cache: Ephemeral, TTL 5 minutes, invalidated on Resource metadata changes
+
+**Capacity implications:**
+- Aggregation cache size: Negligible (bounded by number of distinct attribute × interval × permission profile combinations)
+- TemporalAttributeConfig: Very small (typically <20 records)
+
+**Access patterns:**
+- Timeline histogram: Read-heavy, periodic writes (cache refresh)
+- TemporalAttributeConfig: Read on every page load (cached)
+
+## 13. Runtime and Data Flows
+
+### Flow 1: Page Load — Timeline Render
+
+```
+Browser loads search page with temporal URL params (or defaults)
+    → TemporalFilterContext initializes from URL params (or defaults)
+    → GeoTimeline component mounts
+        → Calls GET /api/timeline/aggregate/?temporal_attr=X&interval=month
+            → Server checks Redis cache
+                → Cache HIT: return cached aggregation
+                → Cache MISS:
+                    → Query TemporalAttributeConfig for active attributes
+                    → Query Metadata table for Resource count per interval
+                        → Filter by user permissions (visible Resource IDs)
+                    → Aggregate results into interval buckets
+                    → Store in Redis with 5-min TTL
+                    → Return response
+        → Renders histogram bars (populated green, empty light gray)
+        → Applies selection highlight from URL params if present
+    → Map Preview reads filter from context
+        → Calls GET /api/resources/?temporal_attr=X&date_from=Y&date_to=Z
+        → Renders filtered Resource extents
+    → Search results read filter from context
+        → Calls GET /api/resources/?temporal_attr=X&date_from=Y&date_to=Z&search=keyword
+        → Shows filtered resource list
+```
+
+### Flow 2: User Drags Timeline Selection
+
+```
+User drags across timeline intervals
+    → GeoTimeline computes selected start/end dates
+    → Dispatches SET_DATE_RANGE to TemporalFilterContext
+    → Context updates:
+        → URL parameters updated via useSearchParams
+        → Map Preview re-fetches with new date range
+        → Search results re-fetch with new date range (300ms debounce)
+    → (Optional) Timeline histogram updates if zoom level changes
+```
+
+### Flow 3: Animation Playback
+
+```
+User selects date range → clicks Play
+    → Animation controller computes step intervals
+    → Begins requestAnimationFrame loop
+    → At each step:
+        → Dispatch SET_CURRENT_STEP to TemporalFilterContext
+        → Map Preview updates to show one interval
+        → Search results update (debounced, optional during animation)
+    → User clicks Pause → animation timer pauses
+    → User clicks Stop → animation resets to beginning of range
+    → Animation reaches end → auto-stop
+```
+
+## 14. Performance Strategy
+
+**Critical paths:**
+1. Timeline aggregation query: `SELECT date_trunc('month', m.value::date), COUNT(DISTINCT m.resource_id) FROM metadata m WHERE m.key = 'temporal:acquisition_date' AND m.resource_id IN (visible_ids) GROUP BY 1 ORDER BY 1`
+2. Temporal-filtered search: Existing search query with additional metadata join/filter
+
+**Expected data volumes:**
+- Initial catalog: <10,000 Resources (foundation phase)
+- Target: Up to 100,000 Resources with temporal metadata within 3-second response
+- Future: Up to 1M Resources (horizontal scaling or materialized view)
+
+**Latency or throughput constraints:**
+- Timeline aggregation: <1s target, <3s maximum (product constraint)
+- Temporal-filtered search: Existing search performance targets apply
+
+**Query and transfer bounds:**
+- Aggregation endpoint returns a maximum of ~3,650 intervals (10 years of daily data). Typical response size: <50KB.
+- The aggregation query uses `date_trunc` for efficient grouping
+
+**Memory, CPU, and I/O pressure:**
+- Aggregation query is I/O-bound on metadata index scan. Proper indexing on (key, value) keeps this efficient.
+- Redis cache absorbs repeated requests during browsing sessions.
+- Animation is client-side: no server impact.
+
+**Caching or precomputation:**
+- Redis cache with key: `timeline:agg:{attr}:{interval}:{perm_hash}`
+- Cache TTL: 5 minutes
+- Invalidation triggers: Resource metadata create/update/delete (via Django signal)
+- TemporalAttributeConfig cache: loaded on app startup and cached indefinitely with manual refresh
+
+**Protection against unbounded work:**
+- Maximum date range for aggregation: 100 years (configurable)
+- Maximum interval count per request: 100,000 (safety limit)
+- Query timeout: 10 seconds for aggregation (configured at database level)
+
+## 15. Scalability Strategy
+
+**Users:**
+- The aggregation cache is shared across users with identical permission profiles. For anonymous users (public), a single cache entry serves all.
+- In high-concurrency scenarios, Redis cache absorbs most requests; the database aggregation query runs only on cache misses.
+
+**Requests:**
+- Timeline aggregation is read-heavy. The endpoint is stateless beyond caching.
+- Rate limiting: Apply standard API rate limiting to prevent abuse of the aggregation endpoint.
+
+**Datasets:**
+- For catalogs exceeding 100,000 Resources, the aggregation query can be optimized:
+  - Database materialized view with periodic refresh
+  - Pre-computed aggregate table updated via Celery task on metadata changes
+  - Partitioning Metadata table by resource creation date
+
+**Geospatial size:**
+- The timeline aggregation does not query spatial data. No spatial index impact.
+
+**Background workload:**
+- Cache warming: optional Celery task that pre-computes common aggregation profiles after large metadata imports
+- Cache invalidation: Django signal handlers fire synchronously but are lightweight (delete Redis key)
+
+**Practical scaling boundaries:**
+- Without caching: ~100K Resources × daily interval ~ 10M metadata rows queried each request — slow
+- With Redis caching: scales to millions of Resources as long as the cache hit ratio remains high (>90%)
+- Beyond that: materialized aggregate view recommended
+
+## 16. Security and Privacy
+
+**Authentication:**
+- Timeline aggregation endpoint requires authentication for private catalogs
+- Anonymous access permitted for public Resources per existing platform policy
+- Authentication mechanism: DRF TokenAuth (per ADR-003)
+
+**Authorization:**
+- Timeline counts reflect only Resources the user is authorized to VIEW
+- Permission filtering uses the existing `permissions` module: a subquery of visible Resource IDs is computed before aggregation
+- The permission fingerprint in the cache key ensures users with different permissions see different counts
+
+**Object-level and tenant-level isolation:**
+- TemporalAttributeConfig is global (not per-resource)
+- Aggregation respects object-level ResourcePermission
+
+**Input validation:**
+- All query parameters validated (date format, temporal attribute existence, interval enum)
+- SQL injection prevented by Django ORM parameterization
+- Date boundaries clamped to reasonable range (100 years max)
+
+**Data exposure:**
+- Aggregation endpoint returns counts, not individual Resource data
+- The date range endpoints (min/max) expose temporal data distribution at aggregate level only
+- Individual resource dates are not exposed through the timeline endpoint
+
+**Secrets and credentials:**
+- No new secrets introduced
+
+**Auditability:**
+- Temporal filter actions are part of search usage, logged through existing audit mechanism
+- TemporalAttributeConfig changes are logged via Django admin logging
+
+**Abuse controls:**
+- Rate limiting on `/api/timeline/aggregate/`
+- Maximum date range enforced (100 years)
+- Maximum interval granularity (day; not hour/minute)
+
+## 17. Failure, Degradation, and Recovery
+
+**Expected failure modes:**
+1. Aggregation database query timeout
+2. Redis cache unavailable
+3. Metadata index missing or corrupted
+4. Temporal attribute key not found in config
+5. Invalid date parameters from URL (bookmarked URL with expired data)
+6. Concurrent cache invalidation race conditions
+
+**Containment boundaries:**
+- Timeline failures are isolated to the timeline component
+- Map preview and search remain functional without temporal filtering
+- No cascading failures across modules
+
+**Timeout and retry policy:**
+- Aggregation API: 10s query timeout → return 503
+- Frontend: 10s timeout on timeline fetch → show error state with retry button
+- Retry: exponential backoff, max 3 retries
+
+**Idempotency:**
+- All GET endpoints are idempotent
+- Cache writes are idempotent (same aggregation data overwrites)
+- No non-idempotent operations in this feature
+
+**Partial failure behavior:**
+- If Redis cache is unavailable: aggregation falls through to database query on every request (slower but functional)
+- If one temporal attribute fails to load: timeline shows error for that attribute, user can select another
+
+**Safe degradation:**
+- Timeline aggregation >3s: show loading indicator, then fall back to year-level aggregation if month-level times out
+- Animation with slow map updates: animation waits for map to confirm update before proceeding to next step
+- No temporal filter: timeline shows full distribution; map and search show all Resources
+
+**Restart and recovery:**
+- Redis restart: cache entries rebuilt on next request
+- Application restart: TemporalAttributeConfig cache reloaded from database
+- No persistent state in the timelines module (beyond configuration)
+
+**Rollback considerations:**
+- New migrations (TemporalAttributeConfig table) must have a reverse migration
+- Feature flag (`timelines.enabled`) controls visibility of the timeline UI and API endpoints
+- Feature flag off: timeline component not rendered; temporal URL parameters ignored
+
+**Data reconciliation:**
+- No mutable data reconciliation needed (aggregation is read-only from existing metadata)
+
+## 18. Observability
+
+**Structured logs:**
+- Timeline aggregation cache hit/miss with key, duration, interval count
+- Temporal attribute config cache reload
+- Aggregation query duration (warning threshold: >2s)
+- Invalidation events (metadata change triggering cache clear)
+
+**Metrics:**
+- `timeline.aggregation.duration_ms` — histogram of aggregation query duration
+- `timeline.aggregation.cache.hit_count` — counter
+- `timeline.aggregation.cache.miss_count` — counter
+- `timeline.aggregation.intervals_returned` — histogram of interval count per response
+- `timeline.api.requests_total` — counter by endpoint and status code
+
+**Traces:**
+- Trace aggregation request through cache check → DB query → response serialization
+- Trace temporal-filtered search to attribute temporal filter duration separately
+
+**Audit events:**
+- TemporalAttributeConfig create/update/delete (via Django admin logging)
+
+**Health or readiness signals:**
+- `GET /api/timeline/health/` returns 200 when TemporalAttributeConfig can be read and Redis is reachable (or gracefully degraded)
+
+**Alert conditions:**
+- Aggregation duration p99 > 5s over 5-minute window
+- Cache miss ratio > 50% over 5-minute window (indicating cache inefficiency)
+- TemporalAttributeConfig query failure (configuration data unavailable)
+
+**Correlation identifiers:**
+- Request-ID header propagated to all logs and traces for a given API call
+- Cache entries tagged with the temporal attribute and interval for invalidation tracking
+
+## 19. Migration and Backward Compatibility
+
+**Schema and data migration:**
+- Forward migration: Create `temporal_attribute_config` table with seed data for common temporal fields
+- Reverse migration: Drop `temporal_attribute_config` table (if no data loss concern)
+- No migration of existing metadata required
+
+**Backfill:**
+- Existing Metadata rows with temporal values remain unchanged
+- TemporalAttributeConfig seed data provides the mapping layer
+- No automated backfill of metadata to canonical key names
+
+**Deployment compatibility:**
+- New Django app (`timelines`) introduced — requires `INSTALLED_APPS` update in settings
+- New URL patterns added — no impact on existing routes
+- Existing search endpoint gains optional query parameters — backward-compatible (ignored when absent)
+
+**API or event compatibility:**
+- New API endpoint (`/api/timeline/aggregate/`) — no backward compatibility concern
+- Search API extension — backward-compatible (new optional parameters)
+
+**Mixed-version operation:**
+- Feature flag `timelines.enabled = False`: timeline API returns 404; UI does not render timeline; search ignores temporal parameters
+- Feature flag allows safe rollout: backend deploy first (flag off), frontend deploy (flag off), enable feature
+
+**Rollback safety:**
+- Disable feature flag → frontend stops rendering timeline, API returns 404
+- Roll back migration → reverse migration drops TemporalAttributeConfig
+- Search API reverts to ignoring temporal parameters (not present in old request)
+
+**Historical data:**
+- Historical temporal metadata is immediately available for timeline aggregation (no migration needed)
+- The timeline automatically shows data for all Resources with matching temporal metadata keys
+
+## 20. Engineering Scenarios
+
+### ES-F022-001 — Normal temporal browsing
+
+**Scenario class:** Normal
+
+**Trigger and scale:** User with 5,000 visible Resources opens the search page. Temporal metadata populated for ~60% of Resources.
+
+**Approved behavior preserved:** FR-F022-001, AC-F022-001
+
+**Architectural concern:** Timeline histogram loads correctly with populated/empty intervals.
+
+**Design response:** Aggregation query executes, cache stores result. Histogram renders with green bars for populated intervals, light gray for empty.
+
+**Failure behavior:** N/A — normal operation expected.
+
+**Recovery:** N/A
+
+**Observability:** Aggregation duration logged; interval count recorded.
+
+**Later validation concern:** Verify histogram bar colors distinguish populated vs. empty intervals.
+
+### ES-F022-002 — Drag-select date range on timeline
+
+**Scenario class:** Normal
+
+**Trigger and scale:** User drags across 6 months on the timeline.
+
+**Approved behavior preserved:** FR-F022-002, AC-F022-002
+
+**Architectural concern:** Selection highlight renders smoothly across intervals.
+
+**Design response:** GeoTimeline computes start/end from drag coordinates, dispatches SET_DATE_RANGE.
+
+**Failure behavior:** N/A
+
+**Recovery:** N/A
+
+**Observability:** Filter state change logged.
+
+**Later validation concern:** Verify drag selection highlights exactly the interval range and displays start/end dates.
+
+### ES-F022-003 — Large catalog aggregation performance
+
+**Scenario class:** Scale
+
+**Trigger and scale:** Catalog with 100,000 Resources, all with temporal metadata. Daily interval over 5 years (~1,825 intervals).
+
+**Approved behavior preserved:** FR-F022-001 (3-second response target per EAF-F022-001)
+
+**Architectural concern:** The `date_trunc` + GROUP BY query must complete within the 3-second product constraint.
+
+**Design response:**
+- Query: `SELECT date_trunc('day', m.value::date), COUNT(DISTINCT m.resource_id) FROM metadata m WHERE m.key = $key AND m.resource_id IN (visible_ids) GROUP BY 1 ORDER BY 1`
+- Composite index on `metadata(key, value)` enables index-only scan
+- Redis cache absorbs repeated queries
+- If query exceeds 3s, fall back to month-level aggregation, then year-level
+
+**Failure behavior:** Month-level fallback response returned within 3s. User sees coarser histogram.
+
+**Recovery:** Cache warms on first request; subsequent requests served from cache.
+
+**Observability:** Aggregation duration metric; fallback event logged.
+
+**Later validation concern:** Verify response time under 3s for 100K Resources with daily intervals.
+
+### ES-F022-004 — Concurrent cache invalidation race
+
+**Scenario class:** Concurrency
+
+**Trigger and scale:** Administrator updates metadata on 500 Resources while 20 users are browsing the timeline.
+
+**Approved behavior preserved:** Users see stale data for at most 5 minutes (cache TTL). No error state.
+
+**Architectural concern:** Django signals for metadata changes fire synchronously. On each signal, the cache invalidation deletes the relevant Redis key. Rapid metadata updates could cause thundering herd (many cache misses simultaneously).
+
+**Design response:**
+- Cache invalidation is a key deletion, not a recompute (lightweight)
+- Thundering herd: If `N` requests arrive simultaneously after cache deletion, the first acquires a distributed lock (Redis `SET NX`), computes the aggregation, and stores it. Subsequent requests wait briefly and read the cached result.
+- Lock timeout: 5 seconds. If lock holder fails, lock expires and next request computes.
+
+**Failure behavior:** Lock failure results in multiple concurrent DB queries — acceptable for low probability.
+
+**Recovery:** Cache is repopulated on first request after invalidation.
+
+**Observability:** Cache miss ratio spike logged.
+
+**Later validation concern:** Verify that rapid metadata updates do not cause DB overload. Simulate 500 metadata changes with 20 concurrent timeline requests.
+
+### ES-F022-005 — Permissions filtering correctness
+
+**Scenario class:** Permission
+
+**Trigger and scale:** Two users: User A can VIEW 1,000 Resources, User B can VIEW 500 overlapping Resources. Same temporal attribute.
+
+**Approved behavior preserved:** FR-F022-010, AC-F022-008
+
+**Architectural concern:** Each user must see different aggregation counts reflecting their permitted Resources. Cache key includes a permission fingerprint.
+
+**Design response:**
+- Permission fingerprint: SHA256 hash of concatenated visible Resource UUIDs (or a cache-invalidation-friendly proxy: last-permission-change timestamp of the user).
+- Cache key: `timeline:agg:{attr}:{interval}:{perm_fingerprint}`
+- Perm fingerprint changes when the user's effective permissions change.
+
+**Failure behavior:** If perm fingerprint is incorrect, user may see stale counts from another permission context. Cache TTL limits exposure to 5 minutes.
+
+**Recovery:** Perm fingerprint regeneration on user role/permission change.
+
+**Observability:** Cache entries per permission context tracked.
+
+**Later validation concern:** Verify that User A and User B see different timeline counts, each reflecting their authorized Resources.
+
+### ES-F022-006 — Animation playback with slow map updates
+
+**Scenario class:** Network
+
+**Trigger and scale:** User clicks Play on a 12-month range (monthly steps). Map preview API takes 2 seconds per fetch.
+
+**Approved behavior preserved:** FR-F022-005, AC-F022-005
+
+**Architectural concern:** Animation steps must not overlap; each step waits for the map to confirm update before proceeding.
+
+**Design response:**
+- Animation controller uses `async/await`: each step awaits a Promise that resolves when the map preview signals completion.
+- Minimum step duration: 500ms (configurable). If map update takes longer, animation waits.
+- Speed setting controls the minimum step duration (lower = faster, but bounded by map update latency).
+
+**Failure behavior:** If a map update fails, the animation pauses and shows an error. User can resume or step manually.
+
+**Recovery:** User can skip to next step manually using step-forward button.
+
+**Observability:** Animation step duration metric; failures logged.
+
+**Later validation concern:** Verify animation does not skip steps when map updates are slow. Verify it pauses on error and allows manual recovery.
+
+### ES-F022-007 — Bookmarked URL with invalid dates
+
+**Scenario class:** Abuse/Misuse
+
+**Trigger and scale:** User bookmarks a URL with `?temporal_from=invalid&temporal_to=2099-13-01`.
+
+**Approved behavior preserved:** FR-F022-009 — URL parameters must be validated.
+
+**Architectural concern:** Invalid or out-of-range dates must not cause errors.
+
+**Design response:**
+- `TemporalFilterContext` on mount validates date parameters:
+  - Invalid format → ignore parameter, use unfiltered state
+  - Date out of reasonable range (< 1900 or > 2100) → clamp to valid range
+  - `date_from > date_to` → swap or ignore
+- Server-side validation returns 400 with clear error message
+- URL parameters that fail validation are cleared from the URL
+
+**Failure behavior:** User sees unfiltered timeline with a toast notification: "Invalid date range in URL. Showing all Resources."
+
+**Recovery:** User reselects a valid date range.
+
+**Observability:** Invalid URL parameter events logged (warning level).
+
+**Later validation concern:** Verify various malformed date formats in URL are handled gracefully.
+
+### ES-F022-008 — Redis cache outage
+
+**Scenario class:** Dependency failure
+
+**Trigger and scale:** Redis is unavailable (network partition, restart, resource exhaustion).
+
+**Approved behavior preserved:** Timeline must remain functional (degraded).
+
+**Architectural concern:** Cache miss handler connects to Redis and may hang.
+
+**Design response:**
+- Redis client configured with short connection timeout (2s) and retry: 1 attempt.
+- On connection failure: catch exception, log warning, proceed with database query.
+- Circuit breaker: after 3 consecutive Redis failures within 60s, skip cache for 5 minutes.
+
+**Failure behavior:** Timeline aggregation runs database query on every request. Slower but functional.
+
+**Recovery:** Circuit breaker resets after 5 minutes. When Redis recovers, cache hits resume.
+
+**Observability:** Redis connectivity errors logged. Circuit breaker state exposed via health endpoint.
+
+**Later validation concern:** Verify timeline remains functional during Redis outage with acceptable performance impact.
+
+### ES-F022-009 — Authentication/permission boundary
+
+**Scenario class:** Permission
+
+**Trigger and scale:** Anonymous user, authenticated user with no Resource permissions, authenticated user with VIEW permission.
+
+**Approved behavior preserved:** FR-F022-010, AC-F022-008
+
+**Architectural concern:** Different users must see different aggregation data consistent with their authorization level.
+
+**Design response:**
+- Anonymous users: aggregation visible_ids = all public Resources with VIEW permission for Anonymous role
+- Authenticated user with no permissions: aggregation empty (0 visible Resources)
+- Authenticated user with VIEW: aggregation shows permitted Resources only
+
+**Failure behavior:** Empty timeline for users without permissions (correct per business rules).
+
+**Recovery:** N/A — correct behavior.
+
+**Observability:** Permission context size and aggregation empty state logged.
+
+**Later validation concern:** Verify anonymous user sees public Resources only; unprivileged authenticated user sees empty timeline.
+
+## 21. Technical Risks
+
+### TR-F022-001 — Temporal aggregation query performance
+
+**Risk condition:** The `date_trunc` + GROUP BY query on large Metadata tables may be slow without proper indexing, especially for daily intervals over long date ranges.
+
+**Architectural impact:** Timeline responsiveness degrades below the 3-second product constraint.
+
+**Trigger or early warning:** Aggregation duration metric exceeds 2s p95. Cache miss ratio remains high.
+
+**Prevention or mitigation:** Composite index on `metadata(key, value)` before deployment. Query analysis to verify index usage (`EXPLAIN ANALYZE`). Redis caching with distributed lock to prevent thundering herd.
+
+**Fallback or recovery:** Automatic fallback to month-level then year-level aggregation. Materialized view as future optimization.
+
+**Residual concern:** Extremely large catalogs (1M+) may still exceed targets with fallback. Materialized aggregate table may be required.
+
+**Review discipline:** Senior Developer + Database Specialist (index tuning).
+
+### TR-F022-002 — Temporal metadata key inconsistency
+
+**Risk condition:** Resources may have temporal metadata stored under non-standard keys, or different Resources may use different keys for the same concept (e.g., "capture_date" vs "acquisition_date").
+
+**Architectural impact:** The timeline may show incomplete data if keys are not recognized by TemporalAttributeConfig.
+
+**Trigger or early warning:** Audit of existing Metadata rows reveals multiple keys for the same temporal concept.
+
+**Prevention or mitigation:** TemporalAttributeConfig provides the canonical key list. Documentation guides Data Managers on correct key usage. Consider a metadata migration utility to map legacy keys to canonical keys.
+
+**Fallback or recovery:** Administrators can add additional TemporalAttributeConfig entries for discovered keys. Timeline retroactively shows data for newly configured keys.
+
+**Residual concern:** Data quality depends on metadata entry discipline. The timeline is only as good as the metadata.
+
+**Review discipline:** Data Manager + Requirements Analyst.
+
+### TR-F022-003 — Cross-browser animation performance
+
+**Risk condition:** `requestAnimationFrame`-based animation may perform differently across browsers, especially on lower-end devices or with large map data per step.
+
+**Architectural impact:** Animation playback may be janky or unresponsive on some devices, violating product constraint (EAF-F022-002).
+
+**Trigger or early warning:** User reports of choppy animation. FPS monitoring in production.
+
+**Prevention or mitigation:** Step-forward/step-backward manual mode always available as alternative. Animation speed control allows user to slow down. Map data debouncing prevents overwhelming the browser.
+
+**Fallback or recovery:** Graceful degradation to manual stepping if continuous animation detects sustained low FPS.
+
+**Residual concern:** Device-specific issues cannot be fully tested in development.
+
+**Review discipline:** Frontend Engineer (performance testing on target devices).
+
+### TR-F022-004 — Permission cache isolation violation
+
+**Risk condition:** The permission fingerprint in the cache key may not accurately reflect changes to a user's permissions (role change, group membership change, ResourcePermission change).
+
+**Architectural impact:** A user may see stale aggregation counts that include Resources they no longer have access to, or exclude Resources they just gained access to.
+
+**Trigger or early warning:** User reports count discrepancy. Permission-change events not triggering cache invalidation.
+
+**Prevention or mitigation:** Cache TTL of 5 minutes limits exposure. Permission changes invalidate the user's cache entries (event listener on ResourcePermission model).
+
+**Fallback or recovery:** User clears cache or waits for TTL expiry.
+
+**Residual concern:** Race condition: user's permissions change between cache invalidation and next request.
+
+**Review discipline:** Security Reviewer.
+
+## 22. Required ADRs
+
+### ADR-REQ-F022-001 — Canonical temporal metadata key convention
+
+**Underlying decision owner:** AGENT-103 — Technical Planner (recommendation); Human Technical Owner (approval if cross-feature impact)
+
+**Decision question:** Should the project adopt a standardized naming convention for temporal metadata keys (e.g., `temporal:acquisition_date`, `temporal:creation_date`, `temporal:publication_date`) used across F-004 (Metadata Management), F-022 (Geocalendar Timelines), and future temporal features?
+
+**Why an ADR is required:** Establishes a platform-wide metadata key convention that affects multiple features (F-004, F-022, F-009, and future temporal features). Inconsistent naming would cause interoperability issues across the platform.
+
+**Platform-wide or cross-feature consequence:** F-004 metadata management UI would use these keys for temporal fields. F-005 search would filter by them. F-009 map preview would display temporal markers by these keys. Future features (F-014 3D temporal, temporal export) would depend on consistent key naming.
+
+**Affected boundaries:** `metadata` module (key storage convention), `timelines` module (key reference), `search` module (temporal filter by key), `visualization` module (temporal display on map).
+
+**Alternatives:**
+- Canonical `temporal:*` prefix convention (recommended): Simple, extensible, self-documenting
+- Free-form keys without convention: Maximum flexibility but causes integration issues
+- Enum-based field on Resource model: Schema rigidity; requires migration for new fields
+
+**Recommendation:** Adopt canonical `temporal:*` prefixed key naming convention for all temporal metadata. Document the convention in the project glossary and metadata management documentation.
+
+**Approval status:** Not requested
+
+**Blocking:** Yes — the naming convention affects how F-004 and F-022 integrate. Without an approved convention, the design relies on an engineering assumption.
+
+## 23. Engineering Assumptions
+
+### EA-F022-001 — Resource temporal metadata is stored as date-typed Metadata values
+
+**Assumption:** Temporal metadata values in the Metadata model are stored as ISO 8601 date strings (e.g., "2026-01-15") that PostgreSQL can cast to `date` or `timestamp` types.
+
+**Evidence:** ADR-006 defines the Metadata model with `data_type` field. The feature specification (FR-F022-001) assumes temporal attribute values are date-comparable. The project domain model shows Metadata as key-value with data_type.
+
+**Validation:** Verify existing Metadata rows with temporal keys have `data_type = "date"` or `data_type = "datetime"`. If values are stored as arbitrary strings, the aggregation query may fail on type cast.
+
+**Design affected if false:** The `date_trunc` PostgreSQL function requires date-typed input. If metadata values are not consistently date-formatted, the aggregation query would need application-level date parsing, significantly reducing performance.
+
+### EA-F022-002 — 2D Map Preview can accept temporal filter parameters
+
+**Assumption:** The F-009 2D Map Preview component is designed to accept spatial extent filter parameters and can be extended to accept temporal filter parameters without significant architectural change.
+
+**Evidence:** The feature catalog lists F-009 as a dependency of F-022. The component design shows a generic Map Preview component. The requirement for temporal-map synchronization (FR-F022-003) depends on this integration.
+
+**Validation:** Review F-009 technical design (when available) to confirm it supports an extensible filter parameter interface. If F-009 uses a fixed query pattern, the temporal integration may require F-009 modifications.
+
+**Design affected if false:** The timeline-map synchronization (INT-F022-002) would require F-009 to be extended first, potentially blocking F-022 delivery or requiring a separate map data-fetching path.
+
+### EA-F022-003 — Animation playback operates entirely client-side
+
+**Assumption:** No server-side animation state or pre-computed animation frames are required. The animation is implemented as sequential filter updates on the client.
+
+**Evidence:** FR-F022-005 describes animation as stepping through time intervals. No server-side animation requirements are present in the specification.
+
+**Validation:** Verified against the Feature Specification — no server-side animation processing is described or implied.
+
+**Design affected if false:** If requirements for server-side animation (e.g., recording animation sessions, sharing animation URLs) emerge, the animation design would need server-side state and potentially Celery-based frame generation.
+
+### EA-F022-004 — TemporalAttributeConfig is seeded with common temporal keys
+
+**Assumption:** The initial data migration for TemporalAttributeConfig seeds well-known temporal metadata keys (acquisition_date, creation_date, publication_date) that match existing or planned metadata entry patterns.
+
+**Evidence:** The project glossary and domain model mention temporal attributes. F-004 (Metadata Management) defines metadata fields that include temporal values.
+
+**Validation:** Coordinate with F-004 and data stewardship to confirm the seed key list matches the metadata entry workflow.
+
+**Design affected if false:** If seed keys do not match actual metadata keys used during resource upload, the timeline will initially show no data. Administrators can add matching keys through the admin interface without code changes.
+
+## 24. Human Technical Decisions
+
+### HTD-F022-001 — Canonical temporal metadata key naming convention
+
+**Status:** Pending
+
+**Decision owner:** Human Technical Owner
+
+**Approval-policy trigger:** Level 5 — Human Approval (establishes a cross-feature platform convention that constrains future designs beyond the current feature; affects metadata management, search, and visualization boundaries)
+
+**Concrete trigger consequence:** The choice of metadata key naming convention creates a platform-wide standard that cannot be trivially changed once adopted. Inconsistent naming would cause data fragmentation across features F-004, F-005, F-009, and F-022.
+
+**Decision question:** Should the platform adopt the `temporal:*` prefixed naming convention for temporal metadata keys (e.g., `temporal:acquisition_date`, `temporal:creation_date`, `temporal:publication_date`)?
+
+**Options:**
+1. **Adopt `temporal:*` prefix convention (recommended):** All temporal metadata keys use the `temporal:` namespace prefix. Backward-compatible; existing keys can be mapped through TemporalAttributeConfig.
+2. **Adopt ISO 19115-inspired convention:** Use standard geospatial metadata paths (e.g., `citation:date`, `contentInfo:dimension:timeExtent`). More compatible with international standards but more verbose.
+3. **Free-form keys without convention:** No naming constraint; each application module defines its own keys. Maximum flexibility but high risk of key fragmentation.
+
+**Recommendation:** Option 1 — `temporal:*` prefix convention. Simple, self-documenting, extensible, and easy to validate. Allows TemporalAttributeConfig to map to any convention if standards compliance is needed later.
+
+**Technical rationale:** The `temporal:` namespace is concise, immediately recognizable, and unlikely to conflict with non-temporal metadata keys. It supports future temporal fields (e.g., `temporal:capture_start`, `temporal:capture_end`, `temporal:validity_period`) without schema changes.
+
+**Trade-offs:**
+- Option 1: Simple but non-standard. Lacks formal geospatial metadata standard alignment.
+- Option 2: Standards-compliant but verbose. May complicate metadata entry UI and query construction.
+- Option 3: Flexible but risky. Fragmentation is likely without governance.
+
+**Consequences:** Adopting this convention creates a de facto standard. All future features that read temporal metadata must use the same keys. A migration from existing non-standard keys would require a metadata stewardship effort.
+
+**Decision:** Pending
+
+**Decision date:** Pending
+
+### HTD-F022-002 — Timeline aggregation cache TTL and invalidation strategy
+
+**Status:** Resolved
+
+**Decision owner:** AGENT-103 — Technical Planner
+
+**Approval-policy trigger:** Not applicable — this is an ordinary Technical Decision resolved autonomously.
+
+**Decision:** Cache TTL of 5 minutes with Django signal-based invalidation on Resource metadata create/update/delete. Redis distributed lock for cache recomputation.
+
+## 25. Open Technical Questions
+
+None. All technical questions are resolved within this design. Blocking decisions are captured as HTDs and ADR requirements above.
+
+## 26. Ready for Task Planning
+
+- [x] Source Feature Specification passed the Feature Readiness Gate
+- [x] Architecture alignment is validated
+- [x] Every requirement and acceptance criterion is traced to the design
+- [x] Reuse and affected components are identified
+- [x] Component boundaries and responsibilities are defined
+- [x] Data model, API, integration, and storage impacts are defined or explicitly not applicable
+- [x] Runtime and data flows are defined
+- [x] Engineering Scenarios cover normal, boundary, scale, failure, misuse, and recovery
+- [x] Performance and scalability are addressed
+- [x] Security and privacy are addressed
+- [x] Failure, degradation, and recovery are addressed
+- [x] Observability is addressed
+- [x] Migration and backward compatibility are addressed
+- [x] All ordinary Technical Decisions are resolved autonomously
+- [x] Every Human Technical Decision cites an explicit approval trigger and concrete consequence
+- [ ] All Human Technical Decisions are resolved
+- [x] Every required ADR has a platform-wide or cross-feature governance reason
+- [ ] All blocking ADR decisions are approved
+- [x] No blocking Open Technical Question remains
+- [x] No product question is being treated as an engineering assumption
+- [x] No feature scope, requirement, user story, or acceptance criterion was changed
+- [x] No implementation tasks, phases, estimates, code, or test plan appear
+
+**Ready for Task Planning:** NO
+
+**Readiness reason:** One Human Technical Decision (HTD-F022-001 — canonical temporal metadata key naming convention) and one ADR (ADR-REQ-F022-001 — same decision) are pending approval. These must be resolved before Task Planning can proceed, as the naming convention affects the data model, API contracts, and integration with F-004 and F-005.
