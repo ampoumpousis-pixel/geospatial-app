@@ -22,12 +22,12 @@ This document represents the operational state of the project.
 
 Phase:
 
-Sprint 0 — Engineering Operating System Bootstrap
+Milestone 1 — Core MVP Implementation (F-001 Active)
 
 
 Objective:
 
-Create the foundation required for AI-assisted professional software development.
+Implement the P0 foundation features, starting with F-001 (User Authentication).
 
 ---
 
@@ -46,16 +46,18 @@ Completed:
 - Agent role model defined
 - Project facts established
 - Project scope established
+- Requirements discovery (personas, user stories, acceptance criteria)
+- System analysis (functional requirements, use cases, workflows)
+- Architecture design (system overview, domain model, component design, 6 ADRs)
+- Project planning (feature catalog, milestones, roadmap, trace bullets)
+- F-001 Feature Specification approved
+- F-001 Technical Design completed and reviewed
+- F-001 Engineering Approval obtained (Decision: NOT REQUIRED)
 
 
-Not Started:
+In Progress:
 
-- Requirements discovery
-- User story creation
-- Acceptance criteria definition
-- Architecture design
-- Implementation planning
-- Development
+- F-001 Task Decomposition (pending)
 
 ---
 
@@ -63,11 +65,11 @@ Not Started:
 
 Current activity:
 
-Project initialization complete. Ready for development planning and trace bullet implementation.
+F-001 (User Authentication) — technical design approved, ready for task decomposition.
 
 Current owner:
 
-Project Director
+AGENT-105 — Task Planner
 
 
 ---
@@ -79,14 +81,16 @@ Project Director
 | EOS-001 | Create company operating system | Completed | Project Director |
 | EOS-002 | Create project knowledge foundation | Completed | Knowledge Manager |
 | EOS-003 | Create AI rules | Completed | Knowledge Manager |
-| EOS-004 | Configure OpenCode environment | In Progress | Platform Engineer |
-| REQ-001 | Requirements discovery | Pending | Requirements Agent |
-| ARC-001 | System architecture design | Pending | Architect Agent |
-| CMD-001 | Project initialization — knowledge review | Completed | Project Director |
-| CMD-001 | Project initialization — requirements discovery | Completed | Requirements Analyst |
-| CMD-001 | Project initialization — system analysis | Completed | System Analyst |
-| CMD-001 | Project initialization — architecture design | Completed | Solution Architect |
-| CMD-001 | Project initialization — project planning | Completed | Project Director |
+| EOS-004 | Configure OpenCode environment | Completed | Platform Engineer |
+| REQ-001 | Requirements discovery | Completed | Requirements Analyst |
+| ARC-001 | System architecture design | Completed | Architect Agent |
+| CMD-001 | Project initialization (full execution) | Completed | Project Director |
+| F-001-SPEC | Feature specification | Completed | Feature Planner |
+| F-001-TECH | Technical design | Completed | Technical Planner |
+| F-001-REVIEW | Engineering review | Completed | Engineering Reviewer |
+| F-001-APPROVAL | Engineering approval | Completed | Approval Gate |
+| F-001-TASKS | Task decomposition | Pending | Task Planner |
+| F-001-IMPL | Implementation | Pending | Engineer |
 
 ---
 
@@ -276,15 +280,11 @@ PROJECT_FACTS.md
 
 # Next Actions
 
-1. Complete AI rules structure
-
-2. Initialize AI memory system
-
-3. Create OpenCode configuration
-
-4. Create first agents
-
-5. Begin requirements discovery
+1. Route F-001 to AGENT-105 (Task Planner) for decomposition
+2. Decompose F-001 technical design into executable tasks
+3. Implement F-001 (User Authentication)
+4. Proceed to Trace Bullet 1 (core resource lifecycle)
+5. Continue with remaining P0 features (F-002 through F-008)
 
 ---
 
@@ -292,22 +292,25 @@ PROJECT_FACTS.md
 
 Session:
 
-CMD-001 — Project initialization (Full execution)
+F-001 — Technical Design, Review, and Approval
 
 
 Completed:
 
-- Phase 0: Knowledge review — reviewed all existing documentation
-- Phase 1: Project direction — validated with human owner
-- Phase 2: Requirements discovery — created personas, user stories, acceptance criteria, success criteria
-- Phase 3: System analysis — created functional requirements, non-functional requirements, use cases, workflows with diagrams
-- Phase 4: Architecture design — created system overview, domain model, component design, architecture diagrams, 6 ADRs, populated empty rule files
-- Phase 5: Project planning — created feature catalog, milestones, roadmap, trace bullets
+- Technical design for F-001 (User Authentication) — 1,581 lines
+  - 7 Technical Decisions resolved autonomously
+  - 5 Engineering Scenarios documented
+  - Full API contract, data model, sequence diagrams, security analysis
+- Engineering review — 170 lines
+  - 0 blocking findings, 4 advisories
+  - Recommendation: READY FOR APPROVAL
+- Engineering approval — Decision: NOT REQUIRED (per policy)
+- Approval artifact written to docs/engineering/approvals/F-001/engineering-approval.md
 
 
 Next session:
 
-Begin Milestone 1 (Core MVP) implementation starting with Trace Bullet 1.
+Route to AGENT-105 (Task Planner) for F-001 task decomposition.
 
 ---
 

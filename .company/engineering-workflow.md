@@ -2,21 +2,131 @@
 
 Version:
 
-1.0
+2.0
 
 Purpose:
 
-Define the day-to-day engineering task lifecycle from intake to delivery.
+Define the engineering planning pipeline contract and the day-to-day engineering task lifecycle from intake to delivery.
 
-This is the operational companion to WORKFLOW.md.
+This document governs:
+- **Part I — Engineering Planning Pipeline:** How Feature Specifications flow through Technical Design, Engineering Review, Approval, and Task Planning. This is the architectural governance layer.
+- **Part II — Task Lifecycle:** How individual engineering tasks are processed from intake to close. This is the operational companion to WORKFLOW.md.
 
 WORKFLOW.md describes the high-level development lifecycle.
 
-This document describes how individual engineering tasks are processed.
+---
+
+# Part I — Engineering Planning Pipeline
+
+## Pipeline Flow
+
+Every Feature Specification passes through a coordinated four-agent pipeline before implementation:
+
+```
+AGENT-103: Technical Design
+    |
+    v
+AGENT-104: Engineering Review
+    |
+    +-- Revisions required --> AGENT-103
+    |
+    v (Ready)
+Engineering Approval Gate
+    |
+    +-- Changes requested --> AGENT-103
+    |
+    v (Approved or Not Required)
+AGENT-105: Task Plan
+    |
+    +-- Design gap found --> AGENT-103
+    |
+    v (Plan ready)
+Implementation
+```
+
+**Critical rule:** Every return to AGENT-103 creates a new Technical Design version, which **invalidates** the previous Engineering Review and Engineering Approval.
+
+## Agent Roles in the Pipeline
+
+| Agent | Role | Input | Output |
+|---|---|---|---|
+| AGENT-103 | Technical Planner | Feature Specification | Technical Design |
+| AGENT-104 | Engineering Design Reviewer | Technical Design + Feature Specification | Engineering Review |
+| Engineering Approval Gate | Human/Policy Decision Gateway | Review + Design + Feature Specification | Engineering Approval |
+| AGENT-105 | Task Planner | All approved artifacts | Implementation Plan |
+
+## Source Version Dependencies
+
+Every artifact in the pipeline must record exactly which versions of upstream artifacts it was built against.
+
+| Artifact | Must Reference |
+|---|---|
+| Feature Specification | Its own version |
+| Technical Design | Feature Specification version |
+| Engineering Review | Feature Specification version, Technical Design version |
+| Engineering Approval | Technical Design version, Engineering Review version |
+| Implementation Plan | Feature Specification version, Technical Design version, Engineering Review version, Engineering Approval version |
+
+## Mandatory Artifact Fields
+
+Every artifact must contain in its metadata:
+
+1. **Artifact Version** — Incremented on every revision. Starts at 1.0.
+2. **Status** — Current lifecycle state (Draft, Ready for Review, Approved, etc.)
+3. **Source Artifact Versions** — Exact versions of all upstream artifacts this document was built against
+4. **Revision History** — Entry for each version describing what changed and why
+5. **Superseded Version** — When applicable, the previous version this revision replaces
+6. **Immediate Next Owner** — The agent or role that must act next
+
+## Downstream Validity Rule
+
+**A downstream artifact is valid only when all referenced source versions exactly match the current versions of those source artifacts.**
+
+Consequences:
+
+- If a Technical Design is revised, the Engineering Review is stale.
+- If a Technical Design is revised after approval, the Engineering Approval is stale.
+- If a Feature Specification is updated, every downstream artifact is stale.
+- AGENT-105 must verify that every referenced source version matches before beginning task decomposition.
+- Stale artifacts require the owning agent to re-execute against the current upstream version.
+
+## Revision and Return Protocol
+
+### Returns to AGENT-103
+
+AGENT-103 must accept four types of returns:
+
+| Return Type | From | Trigger |
+|---|---|---|
+| Product Decision Return | AGENT-102 | Missing product behavior discovered during design |
+| Review Findings | AGENT-104 | Design gaps, inconsistencies, or missing decisions |
+| Approval Change Request | Engineering Approval Gate | Human requests specific changes with stable IDs |
+| Design Gap Return (DGR) | AGENT-105 | Implementation detail missing from the design |
+
+### Revision Rules
+
+When AGENT-103 revises a Technical Design:
+
+1. Update the same `technical-design.md` — do not create a new file.
+2. Increment the Technical Design Version.
+3. Add a Revision History entry describing what changed and which return IDs are resolved.
+4. Identify each resolved return ID explicitly.
+5. Reset the Technical Design Status and readiness.
+6. Route through AGENT-104 for re-review.
+7. The previous Engineering Review and Engineering Approval are automatically invalidated.
+
+**AGENT-103 must never return directly to AGENT-105 after changing the design.** The design must pass through AGENT-104 and the Engineering Approval Gate again.
+
+### Invalidation Rules
+
+- A new Technical Design version invalidates all prior reviews and approvals for that feature.
+- A new Feature Specification version invalidates the Technical Design, review, and approval.
+- An Engineering Review that reports REVISIONS REQUIRED or BLOCKED invalidates any prior approval.
+- AGENT-105 must reject any package where source versions do not match.
 
 ---
 
-# Task Lifecycle
+# Part II — Task Lifecycle
 
 Every engineering task follows these stages:
 

@@ -2,7 +2,7 @@
 
 Version:
 
-1.0
+1.1
 
 Purpose:
 
@@ -129,6 +129,66 @@ Approval recorded in ADR or decision log.
 
 ---
 
+# Engineering Design Approval (Pipeline)
+
+Every Technical Design passes through the Engineering Approval Gate (GATE-ENG-APPROVAL) after Engineering Review. The Gate determines whether human approval is required based on this policy.
+
+## When Human Approval IS Required
+
+The Gate MUST present the design to the human when the Technical Design contains one or more:
+
+- **Human Technical Decisions (HTDs)** — any choice that triggers Level 5: technology stack changes, architecture paradigm changes, new strategic platform technologies, trust boundary or security posture changes, destructive or irreversible migrations, breaking cross-feature or public contracts, or platform-wide conventions that commit multiple features.
+- **New decision-bearing ADRs** that change platform-level conventions and require human sign-off under Level 5.
+- **Scope-affecting architectural choices** that the product specification did not resolve.
+
+The human responds with one of:
+- **APPROVED** — Design is accepted. Route to AGENT-105.
+- **REQUEST CHANGES** — Design needs specific revisions. Return to AGENT-103 with stable change-request IDs (CR-FXXX-NNN).
+- **REJECTED** — Architectural approach is fundamentally unacceptable. Return to AGENT-103 for a substantially different approach.
+
+## When Human Approval Is NOT Required
+
+The Gate records **NOT REQUIRED** and routes directly to AGENT-105 when ALL of the following are true:
+
+- The Technical Design contains only ordinary Technical Decisions owned by AGENT-103.
+- No Human Technical Decision is present.
+- No decision triggers Level 5 (technology stack changes, architecture paradigm changes, security policy changes, public API breaking changes, or budget/timeline implications).
+- All decisions fit within the approved architecture and existing ADRs.
+- The Engineering Design Reviewer (AGENT-104) has verified completeness and consistency with a READY FOR APPROVAL recommendation and zero blocking findings.
+- The Design Integrity Gate (run by AGENT-103 before readiness) passed.
+
+A NOT REQUIRED approval still produces a version-locked approval artifact at `docs/engineering/approvals/F-XXX/engineering-approval.md`. It records the exact Technical Design and Engineering Review versions and serves as the authorization for AGENT-105 to begin task decomposition.
+
+## Eligibility
+
+The Gate enforces an eligibility check before applying this policy. A package is ineligible for any decision when:
+
+- The Engineering Review recommendation is not READY FOR APPROVAL.
+- The Engineering Review has blocking findings.
+- Source artifact versions do not match across the chain.
+- Unresolved HTDs or decision-bearing ADRs remain.
+
+Ineligible packages are routed back without reaching the human. The Gate records NOT ELIGIBLE in the approval artifact.
+
+## Pipeline Approval Matrix
+
+| Condition | Human Required? | Gate Decision | Route |
+|---|---|---|---|
+| Design has HTDs, new ADRs, platform tech changes, trust boundary shifts | Yes | APPROVED / REQUEST CHANGES / REJECTED | AGENT-105 or AGENT-103 |
+| Design has only ordinary TDs, reviewer says READY, zero blocking findings | No | NOT REQUIRED | AGENT-105 |
+| Package ineligible (review not READY, blocking findings, version mismatch) | N/A | NOT ELIGIBLE | AGENT-103 or AGENT-104 |
+
+## Recording Pipeline Approvals
+
+All pipeline approval decisions are recorded in:
+```
+docs/engineering/approvals/F-XXX/engineering-approval.md
+```
+
+Pipeline approvals are version-locked. A new Technical Design version automatically invalidates the prior approval. AGENT-105 must verify the version lock before beginning task decomposition.
+
+---
+
 # Approval Process
 
 ## Request
@@ -160,6 +220,7 @@ Approver responds with one of:
 
 - Approved
 - Approved with conditions
+- Not Required (pipeline only — design does not require human sign-off)
 - Rejected (with reason)
 - Requires escalation
 

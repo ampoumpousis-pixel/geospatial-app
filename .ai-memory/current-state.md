@@ -17,18 +17,18 @@ This file represents the current state of the project.
 
 Phase:
 
-Milestone 0 — Engineering Foundation (Completion)
+Milestone 1 — Core MVP Implementation
 
 Next:
 
-Milestone 1 — Core MVP Implementation
+F-001 Task Decomposition → F-001 Implementation → Trace Bullet 1
 
 
 ---
 
 # Current Objective
 
-Prepare the AI development environment before implementation.
+Implement F-001 (User Authentication) — the foundation feature that all other features depend on.
 
 
 ---
@@ -68,6 +68,16 @@ Completed:
 - Geospatial project rules
 - Testing rules
 - Security rules
+
+
+## Feature F-001 — Planning Complete
+
+Completed:
+
+- Feature specification (docs/project/features/F-001/feature-spec.md)
+- Technical design (docs/engineering/technical-plans/F-001/technical-design.md)
+- Engineering review (docs/engineering/reviews/F-001/engineering-review.md)
+- Engineering approval (docs/engineering/approvals/F-001/engineering-approval.md) — Decision: NOT REQUIRED
 
 
 ---
@@ -121,15 +131,14 @@ Potree
 
 Current task:
 
-None — project initialization is complete. Ready for development.
+F-001 — Task decomposition (AGENT-105)
 
 
 Next:
 
-Begin Milestone 1 — Core MVP implementation.
-1. Implement Trace Bullet 1 (core resource lifecycle)
-2. Implement P0 features (F-001 through F-008)
-3. Implement P1 features (F-009, F-010, F-012, F-013)
+1. F-001 Task Decomposition → Implementation
+2. Trace Bullet 1 (core resource lifecycle)
+3. Remaining P0 features (F-002 through F-008)
 
 ---
 
@@ -158,41 +167,19 @@ Create requirements and architecture phases first.
 
 # Next Recommended Action
 
-Begin development by implementing Trace Bullet 1 (core resource lifecycle end-to-end).
+Route F-001 to AGENT-105 (Task Planner) for task decomposition.
 
-Trace bullet path:
-- User login → Upload file → View resource → Search → Download
+The technical design has been approved (NOT REQUIRED). The next step is to decompose the design into executable tasks for implementation.
 
-This validates the entire core platform before expanding scope.
-
-See: docs/project/planning/trace-bullets.md
+See:
+- docs/project/features/F-001/feature-spec.md
+- docs/engineering/technical-plans/F-001/technical-design.md
+- docs/engineering/reviews/F-001/engineering-review.md
+- docs/engineering/approvals/F-001/engineering-approval.md
 
 ## Documents Created in This Session
 
-- docs/project/requirements/personas.md
-- docs/project/requirements/user-stories.md
-- docs/project/requirements/acceptance-criteria.md
-- docs/project/requirements/success-criteria.md
-- docs/analysis/functional-requirements.md
-- docs/analysis/non-functional-requirements.md
-- docs/analysis/use-cases.md
-- docs/analysis/workflows.md
-- docs/architecture/system-overview.md
-- docs/architecture/domain-model.md
-- docs/architecture/component-design.md
-- docs/architecture/diagrams/system-context.mmd
-- docs/architecture/diagrams/architecture-overview.mmd
-- docs/architecture/diagrams/domain-model.mmd
-- docs/adr/README.md
-- docs/adr/ADR-001-resource-centric-domain.md
-- docs/adr/ADR-002-modular-monolith.md
-- docs/adr/ADR-003-django-rest-framework.md
-- docs/adr/ADR-004-plugin-viewers.md
-- docs/adr/ADR-005-abstracted-publishing.md
-- docs/adr/ADR-006-flexible-metadata.md
-- docs/project/planning/feature-catalog.md
-- docs/project/planning/milestones.md
-- docs/project/planning/roadmap.md
-- docs/project/planning/trace-bullets.md
-- .ai-rules/organization/core-rules.md (populated from empty)
-- .ai-rules/security/security-rules.md (populated from empty)
+- docs/project/features/F-001/feature-spec.md (pre-existing)
+- docs/engineering/technical-plans/F-001/technical-design.md
+- docs/engineering/reviews/F-001/engineering-review.md
+- docs/engineering/approvals/F-001/engineering-approval.md
