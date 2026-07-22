@@ -29,6 +29,46 @@ Completion Criteria:
 - ✓ OpenCode environment configured
 - ✓ Project initialization complete (requirements, analysis, architecture, planning)
 
+### Phase B — Platform Bootstrap
+
+Goal: Scaffold the complete platform development environment with all technologies.
+
+Status: Complete
+
+#### Backend Scaffold
+- ✓ Django project created at platform/backend/
+- ✓ Settings split (base / development / production)
+- ✓ requirements.txt with all dependencies
+- ✓ .env.example with all service credentials
+- ✓ users Django app with custom User model stub
+- ✓ manage.py check passes (0 errors)
+
+#### Frontend Scaffold
+- ✓ Vite + React + TypeScript project at platform/frontend/
+- ✓ Material UI v5 with theme configuration (palette + typography)
+- ✓ Vite proxy configured for /api/ → Django
+- ✓ npm run build succeeds
+
+#### Docker Infrastructure
+- ✓ docker-compose.yml with 8 services (PostgreSQL+PostGIS, Redis, GeoServer, MinIO, Mailhog, Backend, Frontend, Celery)
+- ✓ Dockerfile for backend (Python 3.12-slim)
+- ✓ Dockerfile for frontend (Node 20-alpine)
+
+#### Developer Tooling
+- ✓ .gitignore (Python, Node, Docker, IDE)
+- ✓ ruff.toml configured
+- ✓ mypy.ini configured
+- ✓ .eslintrc.cjs configured
+- ✓ .prettierrc configured
+- ✓ pre-commit hooks configured (ruff, mypy, eslint, prettier)
+
+#### Verification
+- ✓ verify-bootstrap.sh passes all health checks (13/13)
+- ✓ All docker-compose services healthy
+- ✓ Django admin accessible
+- ✓ Frontend dev server serves
+- ✓ Verification script complete
+
 ---
 
 # Milestone 1 — Core MVP

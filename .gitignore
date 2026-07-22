@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Generated feature specs (keep folder, ignore content)
+docs/project/features/*
+!docs/project/features/.gitkeep
+
+# Generated engineering artifacts (keep folder, ignore content)
+docs/engineering/*
+!docs/engineering/.gitkeep
+
+# Platform application code (not part of AI framework)
+platform/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml

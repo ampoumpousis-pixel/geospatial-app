@@ -17,7 +17,7 @@ This file represents the current state of the project.
 
 Phase:
 
-Milestone 1 — Core MVP Implementation
+Milestone 0 — Platform Bootstrap (Complete) → Milestone 1 — Core MVP Implementation
 
 Next:
 
@@ -70,6 +70,24 @@ Completed:
 - Security rules
 
 
+## Platform Bootstrap — Complete
+
+Completed on: 2026-07-22
+
+**Prerequisites installed:**
+- Python 3.14.4, pip 25.1.1, Node 22.22.1, npm 9.2.0
+- GDAL 3.12.2 (system python3-gdal)
+- Docker 29.6.2, Docker Compose v5.3.1
+
+**Scaffold created:**
+- platform/backend/ — Django 5 project with users app, split settings, Celery config
+- platform/frontend/ — Vite + React 18 + TypeScript, MUI v5 theme
+- platform/docker/ — docker-compose with 8 services
+- Root dev configs (.gitignore, ruff, mypy, pre-commit, eslint, prettier)
+- scripts/verify-bootstrap.sh — health check script
+
+**Verification:** 13/13 checks passed — all containers healthy, endpoints responding
+
 ## Feature F-001 — Planning Complete
 
 Completed:
@@ -81,7 +99,6 @@ Completed:
 
 
 ---
-
 # Current Architecture Status
 
 Application:
@@ -91,39 +108,42 @@ GeoSpatial Resource Platform
 
 Architecture:
 
-Planned:
+Implemented (scaffolded):
 
 Modular Monolith
 
 
 Backend:
 
-Django
+Django 5 (scaffolded)
 
-PostgreSQL
+PostgreSQL 16 + PostGIS (Docker, running)
 
-PostGIS
+Redis 7 (Docker, running)
+
+Celery (Docker, running)
+
+MinIO (Docker, running)
 
 
 Frontend:
 
-React
+React 18 + TypeScript (scaffolded)
 
-TypeScript
+Material UI v5 (scaffolded with theme)
 
-Material UI
+Vite (scaffolded)
 
 
 Visualization:
 
-GeoServer
+GeoServer 2.25 (Docker, running)
 
-MapStore
+MapStore — npm library (planned for F-009)
 
-CesiumJS
+CesiumJS — npm dependency (planned for F-014)
 
-Potree
-
+Potree — npm dependency (planned for F-015)
 
 ---
 
@@ -167,9 +187,12 @@ Create requirements and architecture phases first.
 
 # Next Recommended Action
 
-Route F-001 to AGENT-105 (Task Planner) for task decomposition.
+The platform is bootstrapped and ready for feature implementation. All 8 Docker services are running, verification passes.
 
-The technical design has been approved (NOT REQUIRED). The next step is to decompose the design into executable tasks for implementation.
+Next steps:
+1. Implement F-001 (User Authentication) — the foundation feature
+2. Proceed with Trace Bullet 1 (core resource lifecycle)
+3. Continue with remaining P0 features (F-002 through F-008)
 
 See:
 - docs/project/features/F-001/feature-spec.md
@@ -179,7 +202,11 @@ See:
 
 ## Documents Created in This Session
 
-- docs/project/features/F-001/feature-spec.md (pre-existing)
-- docs/engineering/technical-plans/F-001/technical-design.md
-- docs/engineering/reviews/F-001/engineering-review.md
-- docs/engineering/approvals/F-001/engineering-approval.md
+- .opencode/commands/bootstrap.md — New `/bootstrap` command
+- platform/backend/* — Backend Django scaffold
+- platform/frontend/* — Frontend Vite + React scaffold
+- platform/docker/docker-compose.yml — Docker orchestration
+- scripts/verify-bootstrap.sh — Health check script
+- .gitignore, ruff.toml, mypy.ini, .pre-commit-config.yaml — Dev tooling
+- docs/project/planning/milestones.md — Updated with Phase B
+- .ai-memory/current-state.md — Updated with bootstrap state
