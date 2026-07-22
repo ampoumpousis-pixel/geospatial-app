@@ -23,8 +23,8 @@ permission:
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
-    "backend/**": allow
-    "frontend/**": allow
+    "platform/backend/**": allow
+    "platform/frontend/**": allow
     "src/**": allow
     "tests/**": allow
     "config/**": allow
@@ -52,8 +52,8 @@ permission:
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
-    "backend/**": allow
-    "frontend/**": allow
+    "platform/backend/**": allow
+    "platform/frontend/**": allow
     "src/**": allow
     "tests/**": allow
     "config/**": allow

@@ -51,8 +51,9 @@ Completed:
 - Architecture design (system overview, domain model, component design, 6 ADRs)
 - Project planning (feature catalog, milestones, roadmap, trace bullets)
 - F-001 Feature Specification approved
-- F-001 Technical Design completed and reviewed
-- F-001 Engineering Approval obtained (Decision: NOT REQUIRED)
+- F-001 Technical Design v1.1 completed (reconciled with bootstrapped codebase)
+- F-001 Engineering Review v3.0 completed (0 blocking)
+- F-001 Engineering Approval v2.0 obtained (Decision: NOT REQUIRED)
 
 
 In Progress:
@@ -292,25 +293,21 @@ PROJECT_FACTS.md
 
 Session:
 
-F-001 — Technical Design, Review, and Approval
+F-001 — Technical Design Revision, Re-Review, and Re-Approval
 
 
 Completed:
 
-- Technical design for F-001 (User Authentication) — 1,581 lines
-  - 7 Technical Decisions resolved autonomously
-  - 5 Engineering Scenarios documented
-  - Full API contract, data model, sequence diagrams, security analysis
-- Engineering review — 170 lines
-  - 0 blocking findings, 4 advisories
-  - Recommendation: READY FOR APPROVAL
-- Engineering approval — Decision: NOT REQUIRED (per policy)
-- Approval artifact written to docs/engineering/approvals/F-001/engineering-approval.md
+- Technical Design v1.1 — reconciled with bootstrapped codebase (paths, bootstrap inventory, settings split)
+  - All 7 TDs, 8 API contracts, data models, flows, scenarios unchanged from v1.0
+- Engineering Review v3.0 — 0 blocking findings, 5 advisories, READY FOR APPROVAL
+- Engineering Approval v2.0 — NOT REQUIRED (per policy, same analysis as v1.0)
+- Project state files updated
 
 
 Next session:
 
-Route to AGENT-105 (Task Planner) for F-001 task decomposition.
+Route to AGENT-105 (Task Planner) for F-001 task decomposition with corrected paths.
 
 ---
 

@@ -16,12 +16,13 @@ permission:
     "docs/project/PROJECT_SCOPE.md": allow
     "docs/project/PROJECT_STATUS.md": allow
     "docs/project/planning/feature-catalog.md": allow
+    "docs/project/planning/trace-bullets.md": allow
     "docs/project/features/*/feature-spec.md": allow
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
-    "backend/**": allow
-    "frontend/**": allow
+    "platform/backend/**": allow
+    "platform/frontend/**": allow
     "src/**": allow
     "tests/**": allow
     "config/**": allow
@@ -48,8 +49,8 @@ permission:
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
-    "backend/**": allow
-    "frontend/**": allow
+    "platform/backend/**": allow
+    "platform/frontend/**": allow
     "src/**": allow
     "tests/**": allow
     "config/**": allow
@@ -330,8 +331,10 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 5. identify files affected by each task (exact paths)
 6. trace each task to its Technical Design source (decision ID, component ID, section number)
 7. trace each task to its Feature Specification acceptance criteria
-8. for each task, define developer-level verification (test commands, manual checks)
-9. do not accept blanket traceability claims like "covers all acceptance criteria" — require explicit mappings
+8. read `docs/project/planning/trace-bullets.md` and check whether this feature maps to a trace bullet step
+9. if the feature is part of a trace bullet, identify the minimal task subset that implements the trace bullet path and mark it in the plan
+10. for each task, define developer-level verification (test commands, manual checks)
+11. do not accept blanket traceability claims like "covers all acceptance criteria" — require explicit mappings
 
 ### Phase 6 — Build and validate the dependency graph
 1. determine execution order from the dependency graph
@@ -398,6 +401,13 @@ It must be sufficient for Developer Agents to begin implementation without reope
 
 ## Overview
 Brief summary of the implementation approach and total task count.
+
+## Trace Bullet
+When this feature maps to a trace bullet step:
+| Trace Bullet | Document Ref | Task Subset | Verification |
+|---|---|---|---|
+| TB-1, Step N | docs/project/planning/trace-bullets.md | T-FXXX-001, T-FXXX-002, ... | Login → endpoint → logout flow passes |
+List the minimal task subset that implements the trace bullet path. This tells developers which tasks to build and verify first before expanding to the full plan. If the feature is not part of any trace bullet, note: "Not part of any trace bullet."
 
 ## Design Gap Returns (when BLOCKED)
 [Per DGR-FXXX-NNN: title, missing detail, ambiguity, why blocked, affected sections, next owner]
