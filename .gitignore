@@ -51,9 +51,12 @@ docker-compose.override.yml
 docs/project/features/*
 !docs/project/features/.gitkeep
 
-# Generated engineering artifacts (keep folder, ignore content)
-docs/engineering/*
-!docs/engineering/.gitkeep
+# Generated engineering artifacts (ignore subdirectories, track root-level files)
+docs/engineering/approvals/
+docs/engineering/reviews/
+docs/engineering/task-plans/
+docs/engineering/technical-plans/
+docs/engineering/execution-packages/
 
 # Platform application code (not part of AI framework)
 platform/
