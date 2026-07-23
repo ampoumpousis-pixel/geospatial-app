@@ -285,12 +285,25 @@ Produce a completion report:
 ```markdown
 ## Completion Report — T-FXXX-NNN
 
+### Execution Package
+[path to execution package]
+
 ### Execution Type
 [Implementation | Verification | Migration | Investigation | Spike]
 
+### Files Changed
+Created:
+- [full path]
+
+Modified:
+- [full path]
+
+Deleted:
+- [full path]
+
 ### Implemented
-- [list of files created or modified]
-- [list of tests written]
+- [summary of what was implemented]
+- [list of tests written, if any]
 
 ### Verification Results
 - [ ] Existing tests: [pass/fail count]
@@ -305,6 +318,8 @@ Produce a completion report:
 - [any design ambiguities encountered and resolved]
 - [any recommended reads that proved essential or irrelevant]
 ```
+
+The **Files Changed** section is mandatory. List every file created, modified, or deleted with its full path. This is the handshake with the Code Reviewer — they will independently verify these claims against the repository.
 
 ---
 
