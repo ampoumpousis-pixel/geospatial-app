@@ -10,30 +10,42 @@ Companion documents: `context-management.md` (how agents read), `execution-artif
 
 ---
 
-## Core Principle
+## Knowledge Lifecycle
 
-**Execution consumes approved knowledge — it does not create it.**
+**Planning creates knowledge. Execution consumes knowledge. Review validates knowledge. Approval authorizes knowledge.**
 
-Every execution decision flows from this principle:
+This axiom describes the entire system. Every role, every artifact, every handoff fits one of these four stages:
 
-- Developer agents implement the approved design. They do not redesign.
-- Reviewers identify issues against standards and design. They do not change architecture.
+- **Planning** creates knowledge — Feature Specifications, Technical Designs, Implementation Plans.
+- **Execution** consumes knowledge — developer agents implement approved design, they do not redesign.
+- **Review** validates knowledge — reviewers check implementation against design and standards, they do not change architecture.
+- **Approval** authorizes knowledge — the human or policy gate decides what may proceed.
+
+Execution-specific implications:
 - Contracts derive from the Technical Design. Code does not define contracts.
 - Context starts with approved artifacts. The repository is consulted only if necessary.
 - Implementation stays inside defined boundaries.
+- Developer agents do not create knowledge — they consume it.
 
 ---
 
 ## Execution Lifecycle
 
 ```
+Session Initialization (read current-state, handoff)
+        │
+        ▼
 Approved Task
         │
         ▼
 Execution Package (prepared by planner/coordinator)
         │
         ▼
-Developer Agent (read package → expand context if needed → implement)
+Developer Agent
+        │
+    Understand Goal
+        │
+    Plan → Execute Required Activities → Verify
         │
         ▼
 Code Review
@@ -46,7 +58,17 @@ Pass                Issues Found
 Complete        (Phase 2 governance: fix, escalate, or accept)
 ```
 
-The lifecycle is intentionally linear. Developer agents do not edit the plan, the package, or the design. They implement what was approved and verify their work. Review happens after implementation, not during it.
+### Session Initialization
+
+Every agent must read `.ai-memory/current-state.md` and `.ai-memory/handoff.md` (if present) at session start. This is not a task-context read — it does not count against the context budget.
+
+### Execute Required Activities
+
+The Execution Package's `Execution Type` field declares intent: Implementation, Verification, Migration, Investigation, or Spike. The agent adapts which activities it performs (implement, verify, inspect, migrate) but follows the same lifecycle. The agent does not choose the type — the package declares it.
+
+### Execution Environment
+
+Agents must identify the project's runtime environment before running commands. Priority: project-documented runtime > container > host. Agents must not assume host execution. The agent references the project's configured environment — it does not embed infrastructure-specific commands.
 
 ---
 

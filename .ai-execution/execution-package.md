@@ -49,9 +49,22 @@ Feature: F-XXX
 Task: T-FXXX-NNN
 Package Version: 1.0
 Owner: Backend | Frontend | Infrastructure
+Execution Type: Implementation | Verification | Migration | Investigation | Spike
 Status: Ready for Implementation
 Created: YYYY-MM-DD
 ```
+
+**Execution Type** declares the expected outcome. It influences which activities the agent performs — it is not a workflow selector. The agent follows the same lifecycle regardless of type.
+
+| Type | Expected Activities |
+|---|---|
+| Implementation | Modify code, create files, write tests, verify |
+| Verification | Validate state, run checks, produce report — no code changes |
+| Migration | Modify code, run migrations, verify state, backup if applicable |
+| Investigation | Inspect code, query data, produce report only — no writes |
+| Spike | Experiment, prototype, produce findings — may write throwaway code in a sandbox |
+
+If Execution Type is not specified, it defaults to `Implementation`.
 
 **Source Artifact Versions** (must match current versions):
 
