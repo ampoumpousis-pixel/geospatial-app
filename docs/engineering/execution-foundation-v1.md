@@ -100,14 +100,14 @@ All execution agents inherit from the generic template. Each adds role-specific 
 .opencode/agents/
 
     generic-agent-template.md              (198 lines — shared skeleton)
-        │
-        ├── backend-implementation-agent.md    (287 lines — Django/DRF specialist)
-        │
-        ├── frontend-implementation-agent.md   (250 lines — React/TS specialist)
-        │
-        ├── infrastructure-implementation-agent.md (230 lines — Docker specialist)
-        │
-        └── code-reviewer-agent.md             (240 lines — pipeline integrity validator)
+
+    development/
+        backend-implementation-agent.md    (287 lines — Django/DRF specialist)
+        frontend-implementation-agent.md   (250 lines — React/TS specialist)
+        infrastructure-implementation-agent.md (230 lines — Docker specialist)
+
+    review/
+        code-reviewer-agent.md             (240 lines — pipeline integrity validator)
 ```
 
 ### Template inheritance
