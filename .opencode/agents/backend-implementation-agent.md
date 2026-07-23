@@ -3,7 +3,7 @@ description: Backend implementation agent. Implements approved backend tasks wit
 mode: subagent
 temperature: 0.1
 steps: 15
-color: blue
+color: info
 permission:
   read:
     "*": deny

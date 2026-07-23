@@ -3,7 +3,7 @@ description: Code Reviewer agent. Pipeline integrity reviewer — validates that
 mode: subagent
 temperature: 0.1
 steps: 15
-color: purple
+color: accent
 permission:
   read:
     "*": deny
