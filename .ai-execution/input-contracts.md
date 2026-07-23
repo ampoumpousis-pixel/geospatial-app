@@ -148,7 +148,7 @@ The frontend agent owns `platform/frontend/**`. It reads the same API design sec
 
 ## Infrastructure Implementation Agent
 
-*Placeholder contract. Detailed in Iteration 4.*
+## Infrastructure Implementation Agent
 
 ### Required Inputs
 
@@ -169,7 +169,7 @@ The frontend agent owns `platform/frontend/**`. It reads the same API design sec
 
 ### Domain Boundaries
 
-The infrastructure agent owns `platform/infrastructure/**`. It may read backend or frontend configuration only when explicitly permitted by the package.
+The infrastructure agent owns `platform/docker/**`. It operates Docker Compose configurations and runtime state. It may read backend or frontend configuration only when explicitly permitted by the package.
 
 ---
 

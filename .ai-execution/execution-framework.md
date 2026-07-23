@@ -109,6 +109,7 @@ Every directory in the project has a single owner agent type.
 | `platform/backend/**` | Backend Implementation Agent |
 | `platform/frontend/**` | Frontend Implementation Agent |
 | `platform/infrastructure/**` | Infrastructure Implementation Agent |
+| `platform/docker/**` | Infrastructure Implementation Agent |
 | `.ai-execution/**` | Execution Framework (human-managed) |
 | `.company/**` | Governance (human-managed) |
 | `.ai-rules/**` | Standards (human-managed) |
