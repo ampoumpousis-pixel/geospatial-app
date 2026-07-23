@@ -122,8 +122,6 @@ The backend agent may write only within the Allowed Writes listed in the package
 
 ## Frontend Implementation Agent
 
-*Placeholder contract. Detailed in Iteration 3.*
-
 ### Required Inputs
 
 | Input | Owner | Authority | Description |
