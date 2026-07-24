@@ -143,6 +143,34 @@ Use:
 
 ---
 
+## LESSON-004
+
+Date:
+
+2026-07-24
+
+
+Situation:
+
+Frontend agent created a React component that called a backend API endpoint. All static checks passed (tsc, lint, boundaries). But when a human tester clicked the button, it failed because the Vite proxy wasn't configured to forward requests to the backend Docker container.
+
+
+Observation:
+
+Static analysis is not sufficient for frontend components that consume backend APIs. The component compiled and rendered correctly — but couldn't reach the backend at runtime. The verification step must distinguish between static checks (TypeScript, lint) and runtime checks (actual HTTP request flow).
+
+
+Impact:
+
+A feature that passed all agent verification checks was broken for the user. The reviewer would have PASSed clean-looking code that didn't function.
+
+
+Recommendation:
+
+Frontend agents must run runtime verification when tasks involve API-consuming components. Start the dev server, verify the HTTP request/response works end-to-end. Also, planning should identify infrastructure dependencies (proxy configs, routing) when decomposing API-consuming frontend tasks.
+
+---
+
 # Future Lessons
 
 New lessons should be added as the project evolves.

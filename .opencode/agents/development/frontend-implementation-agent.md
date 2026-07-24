@@ -3,7 +3,7 @@ description: Frontend implementation agent. Implements approved frontend tasks w
 mode: subagent
 temperature: 0.1
 steps: 15
-color: green
+color: success
 permission:
   read:
     "*": deny
@@ -200,12 +200,21 @@ Identify every file to create/modify. Verify each within Allowed Writes. Identif
 
 Run every check in the package's Verification Requirements:
 
+**Static Checks:**
 1. Run existing tests.
 2. Run new tests.
 3. Run `npx tsc --noEmit` for type checking.
 4. Run `npx eslint` for linting on changed files (if configured).
 5. Verify acceptance criteria from the package.
 6. Verify no files outside Allowed Writes were modified.
+
+**Runtime Checks (when task creates or modifies API-consuming components):**
+7. **If the task creates or modifies components that call backend endpoints:** verify the HTTP request/response flow works end-to-end.
+   - Start the dev server (`npm run dev` — already a capability).
+   - Wait for compilation.
+   - Test the API call directly against the proxy: verify the frontend can reach the backend.
+   - If the proxy is misconfigured or missing, and `vite.config.ts` is outside your Allowed Writes, **escalate** — do not silently fix infrastructure dependencies.
+   - If runtime check fails, do not submit for review.
 
 Any failure → fix → re-verify. Do not submit with failing checks.
 
@@ -247,6 +256,7 @@ Deleted:
 - [ ] Acceptance criteria: [all met / which failed]
 - [ ] Boundary check: [no writes outside allowed]
 - [ ] Backend independence: [no backend files read]
+- [ ] Runtime verification: [API calls succeed / N/A]
 
 ### Notes
 - [discrepancies between design and implementation]

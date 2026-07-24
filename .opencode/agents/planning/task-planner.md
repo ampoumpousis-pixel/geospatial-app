@@ -356,10 +356,16 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 
 ## Artifact Contract
 
-For a valid handoff, you create exactly one project artifact:
+For a valid handoff, you create two project artifacts:
 
+1. **Implementation Plan** — human-readable task decomposition:
 ```text
 docs/engineering/task-plans/F-XXX/implementation-plan.md
+```
+
+2. **Task Manifest** — machine-readable task data consumed by the Execution Package Agent:
+```text
+docs/engineering/task-plans/F-XXX/task-manifest.json
 ```
 
 Replace F-XXX with the assigned Feature ID.
@@ -369,19 +375,52 @@ If the task-plan directory does not exist, create only that directory:
 mkdir -p docs/engineering/task-plans/F-XXX
 ```
 
-You MUST NOT create, modify, or request creation of any other artifact, including:
+### Task Manifest Schema (manifest_version: "1.0")
+
+```json
+{
+  "manifest_version": "1.0",
+  "source_versions": {
+    "feature_spec": "1.0",
+    "technical_design": "1.0",
+    "engineering_review": "1.0",
+    "engineering_approval": "1.0",
+    "implementation_plan": "1.0"
+  },
+  "feature": {
+    "id": "F-XXX",
+    "name": "Feature Title"
+  },
+  "tasks": [
+    {
+      "id": "T-FXXX-NNN",
+      "domain": "backend",
+      "execution_type": "implementation",
+      "summary": "One-line description",
+      "description": "Full description",
+      "files": ["path/to/file.py"],
+      "allowed_writes": ["path/to/**"],
+      "contracts": ["CONTRACT-NAME:1.0"],
+      "dependencies": [],
+      "design_refs": ["Section N: Title"],
+      "completion_criteria": ["Verifiable criterion"]
+    }
+  ]
+}
+```
+
+You MUST NOT create or modify:
 - technical-design.md
 - feature-spec.md
 - engineering-review.md
 - engineering-approval.md
 - ADR files
 - source code or tests
-- configuration changes
+- execution packages (those are produced by the Execution Package Agent)
 
-The Implementation Plan is an execution artifact.
-It must be sufficient for Developer Agents to begin implementation without reopening:
-- feature decisions
-- architecture decisions
+The Implementation Plan is for human consumption.
+The Task Manifest (JSON) is input for the Execution Package Agent.
+Both derive from the same task decomposition and must be consistent.
 - technology choices
 - security policy choices
 

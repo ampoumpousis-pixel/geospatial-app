@@ -356,11 +356,39 @@ Related Requirements: FR-06-01, US-PUB-003, US-PUB-004, US-GIS-006
 
 Risks: Medium (GDAL dependency, tile generation performance for large rasters, tile cache storage)
 
+---
+
+## F-TEST-001 — System Info Display (Pipeline Validation)
+
+Description:
+Simple health-check endpoint that returns system information (version, database status, uptime). Frontend displays the result via a button component. Infrastructure verifies container health. Designed to validate the end-to-end automated planning → contracts → execution packages → developer agents pipeline.
+
+Business Value:
+Internal — validates the execution pipeline without touching production features.
+
+Priority: Test (not a production feature)
+
+Dependencies: None (standalone test, isolated from production features)
+
+Related Requirements: None (test feature)
+
+Acceptance Criteria:
+- Backend endpoint `GET /api/system-info/` returns 200 with JSON
+- Frontend button component calls endpoint and displays result
+- Infrastructure verification confirms containers running and endpoint reachable
+- All 3 contract-bound packages generated from task manifest
+- Selective contract invalidation works
+
+Risks: None (no production impact)
+
+---
+
 # Priority Summary
 
 | Priority | Count | Features |
-|---|---|---|
+|---|---|---|---|
 | P0 | 8 | F-001 through F-008 |
 | P1 | 5 | F-009, F-010, F-011, F-012, F-013 |
 | P2 | 5 | F-014, F-015, F-016, F-017, F-021 |
 | P3 | 3 | F-018, F-019, F-020 |
+| Test | 1 | F-TEST-001 |

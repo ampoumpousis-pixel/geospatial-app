@@ -3,7 +3,7 @@ description: Infrastructure implementation agent. Applies approved infrastructur
 mode: subagent
 temperature: 0.1
 steps: 15
-color: orange
+color: warning
 permission:
   read:
     "*": deny
