@@ -208,12 +208,20 @@ The Execution Type from the package determines expected activities:
 
 Run every check in the package's Verification Requirements. Execute commands according to the project's execution environment:
 
+**Static Checks:**
 1. Run existing tests in affected modules.
 2. Run new tests.
 3. Run `ruff check` on changed files.
 4. Run `mypy` on changed files.
 5. Verify acceptance criteria from the package.
 6. Verify no files outside Allowed Writes were modified.
+
+**Runtime Checks (when task creates or modifies API views/endpoints):**
+7. **If the task creates or modifies Django views that respond to HTTP requests:** verify the endpoint works at runtime.
+   - Start or restart the dev server if needed (new URL patterns require a server reload).
+   - Test the endpoint with `curl` or equivalent: verify correct status code, verify response body matches the Technical Design schema.
+   - If the endpoint returns 404 after adding URL patterns, the server needs restart — do it and re-verify.
+   - If runtime check fails, do not submit for review.
 
 Any failure → fix → re-verify. Do not submit with failing checks.
 

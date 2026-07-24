@@ -329,7 +329,12 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 3. ensure each task has a single responsible area
 4. define task IDs and descriptions
 5. identify files affected by each task (exact paths)
-6. trace each task to its Technical Design source (decision ID, component ID, section number)
+6. **For frontend tasks that create or modify API-consuming components:** also identify integration dependencies outside the component directory:
+   - `App.tsx` or equivalent entry point (component must be imported and rendered)
+   - `vite.config.ts` or equivalent proxy configuration (API routes must reach backend)
+   - Routing configuration files (if new routes are needed)
+   These files must be listed in the task's `files` and `allowed_writes` — otherwise the developer agent cannot complete the feature end-to-end.
+7. trace each task to its Technical Design source (decision ID, component ID, section number)
 7. trace each task to its Feature Specification acceptance criteria
 8. read `docs/project/planning/trace-bullets.md` and check whether this feature maps to a trace bullet step
 9. if the feature is part of a trace bullet, identify the minimal task subset that implements the trace bullet path and mark it in the plan

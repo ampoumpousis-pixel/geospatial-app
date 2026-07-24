@@ -186,18 +186,25 @@ Forbidden writes are an explicit safety net. They restate the ownership boundari
 
 ```markdown
 Required Checks:
-1. [ ] Run existing tests: platform/backend/app_name/tests/
+
+Static:
+1. [ ] Run existing tests: [path]
 2. [ ] Run linter: ruff, mypy, eslint (as applicable)
 3. [ ] Run type checker: mypy (backend), tsc (frontend)
-4. [ ] Verify acceptance criteria: [specific criteria from Technical Design]
-5. [ ] Verify no writes outside allowed directories
+4. [ ] Run system checks: python manage.py check (backend), npm run build (frontend)
+
+Runtime:
+5. [ ] If API views: test endpoint returns correct status and response body
+6. [ ] If API-consuming components: test HTTP request/response flow end-to-end
+7. [ ] Verify acceptance criteria: [specific criteria from Technical Design]
+8. [ ] Verify no writes outside allowed directories
 
 Additional Verification:
 - [Task-specific checks — e.g., "Verify API returns 201 on valid POST"]
 - [Task-specific checks — e.g., "Verify error response matches contract"]
 ```
 
-The standard five checks from the Execution Framework are mandatory. The package may add task-specific checks beyond those five.
+The standard checks are mandatory. Static checks verify code correctness. Runtime checks verify behavior — they are required when the task creates or modifies API views, endpoints, or API-consuming components. The package may add task-specific checks beyond these.
 
 ---
 
