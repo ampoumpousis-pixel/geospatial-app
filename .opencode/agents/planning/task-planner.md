@@ -400,7 +400,9 @@ mkdir -p docs/engineering/task-plans/F-XXX
     {
       "id": "T-FXXX-NNN",
       "domain": "backend",
+      "executor": "backend-implementation-agent",
       "execution_type": "implementation",
+      "retry_limit": 1,
       "summary": "One-line description",
       "description": "Full description",
       "files": ["path/to/file.py"],

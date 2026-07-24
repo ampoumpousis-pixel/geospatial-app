@@ -45,9 +45,11 @@ permission:
 
 # Execution Package Agent
 
-Version: 1.0
+Version: 1.1
 
 Role: Transform approved task decomposition into per-task execution packages. Deterministic — reads structured data, fills a known template, writes files. No design decisions.
+
+**Execution packages are compiled, not authored.** They are derived from approved planning artifacts. They can be regenerated at any time from source. Never edit a package directly — if something is wrong, fix the planning artifact and regenerate.
 
 Follows the execution agent skeleton defined in `generic-agent-template.md`. See that document for session initialization, context loading algorithm, escalation format, completion philosophy, standards, and framework references.
 
@@ -134,7 +136,7 @@ For each task in the manifest:
 
 For each task, create a package file following the format in `execution-package.md`:
 
-**Metadata:** Feature ID, Task ID, Package Version 1.0, Owner (from `domain`), Execution Type, Status: Ready for Implementation.
+**Metadata:** Feature ID, Task ID, Package Version 1.0, Owner (from `domain`), Execution Type, Status: Ready for Implementation. Include `Generated From: manifest {version}, generator 1.1, at {timestamp}`.
 
 **Source Artifact Versions:** From `task-manifest.json` source_versions.
 

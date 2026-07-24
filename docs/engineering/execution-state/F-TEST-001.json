@@ -1,0 +1,52 @@
+{
+  "feature": "F-TEST-001",
+  "manifest_version": "1.0",
+  "generated": "2026-07-24T12:00:00Z",
+  "tasks": [
+    {
+      "id": "T-FTEST-001-001",
+      "executor": "backend-implementation-agent",
+      "domain": "backend",
+      "state": "COMPLETED",
+      "retry_count": 0,
+      "retry_limit": 1,
+      "transitions": [
+        {"from": "PENDING", "to": "GENERATING_PACKAGE", "at": "2026-07-24T12:00:01Z"},
+        {"from": "GENERATING_PACKAGE", "to": "PACKAGE_READY", "at": "2026-07-24T12:00:05Z"},
+        {"from": "PACKAGE_READY", "to": "EXECUTING", "at": "2026-07-24T12:00:10Z"},
+        {"from": "EXECUTING", "to": "AWAITING_REVIEW", "at": "2026-07-24T12:05:00Z"},
+        {"from": "AWAITING_REVIEW", "to": "COMPLETED", "at": "2026-07-24T12:10:00Z"}
+      ]
+    },
+    {
+      "id": "T-FTEST-001-002",
+      "executor": "frontend-implementation-agent",
+      "domain": "frontend",
+      "state": "COMPLETED",
+      "retry_count": 0,
+      "retry_limit": 1,
+      "transitions": [
+        {"from": "PENDING", "to": "GENERATING_PACKAGE", "at": "2026-07-24T12:10:01Z"},
+        {"from": "GENERATING_PACKAGE", "to": "PACKAGE_READY", "at": "2026-07-24T12:10:05Z"},
+        {"from": "PACKAGE_READY", "to": "EXECUTING", "at": "2026-07-24T12:10:10Z"},
+        {"from": "EXECUTING", "to": "AWAITING_REVIEW", "at": "2026-07-24T12:15:00Z"},
+        {"from": "AWAITING_REVIEW", "to": "COMPLETED", "at": "2026-07-24T12:20:00Z"}
+      ]
+    },
+    {
+      "id": "T-FTEST-001-003",
+      "executor": "infrastructure-implementation-agent",
+      "domain": "infrastructure",
+      "state": "COMPLETED",
+      "retry_count": 0,
+      "retry_limit": 1,
+      "transitions": [
+        {"from": "PENDING", "to": "GENERATING_PACKAGE", "at": "2026-07-24T12:10:01Z"},
+        {"from": "GENERATING_PACKAGE", "to": "PACKAGE_READY", "at": "2026-07-24T12:10:05Z"},
+        {"from": "PACKAGE_READY", "to": "EXECUTING", "at": "2026-07-24T12:20:10Z"},
+        {"from": "EXECUTING", "to": "AWAITING_REVIEW", "at": "2026-07-24T12:25:00Z"},
+        {"from": "AWAITING_REVIEW", "to": "COMPLETED", "at": "2026-07-24T12:30:00Z"}
+      ]
+    }
+  ]
+}
