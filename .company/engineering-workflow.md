@@ -66,6 +66,21 @@ Every artifact in the pipeline must record exactly which versions of upstream ar
 | Engineering Review | Feature Specification version, Technical Design version |
 | Engineering Approval | Technical Design version, Engineering Review version |
 | Implementation Plan | Feature Specification version, Technical Design version, Engineering Review version, Engineering Approval version |
+| Execution Package | Feature Specification version, Technical Design version, Engineering Review version, Engineering Approval version, Implementation Plan version |
+
+### Contract Dependencies (Phase 2.1+)
+
+When the Technical Design declares contracts in its Contract Boundary Declaration section, every execution package derived from it must also declare its Contract Dependencies.
+
+| Artifact | Must Reference |
+|---|---|
+| Execution Package | Contract name and version for each contract it depends on |
+
+**Document Version** tracks the evolution of the Technical Design document.
+
+**Contract Version** tracks the evolution of a specific declared contract.
+
+The two version sequences are independent. Example: `Technical Design v1.7` may carry `API-F001-AUTH v1.0`, `DB-F001-AUTH v1.3`, `RT-F001-AUTH v1.1`.
 
 ## Mandatory Artifact Fields
 
@@ -80,7 +95,7 @@ Every artifact must contain in its metadata:
 
 ## Downstream Validity Rule
 
-**A downstream artifact is valid only when all referenced source versions exactly match the current versions of those source artifacts.**
+**A downstream artifact is valid only when all referenced source versions exactly match the current versions of those source artifacts. For execution packages with declared Contract Dependencies, the package is valid only when all declared contract versions also match.**
 
 Consequences:
 
@@ -123,6 +138,7 @@ When AGENT-103 revises a Technical Design:
 - A new Feature Specification version invalidates the Technical Design, review, and approval.
 - An Engineering Review that reports REVISIONS REQUIRED or BLOCKED invalidates any prior approval.
 - AGENT-105 must reject any package where source versions do not match.
+- An execution package is stale when any declared contract dependency version does not match the current version declared in the Technical Design's Contract Boundary Declaration.
 
 ---
 

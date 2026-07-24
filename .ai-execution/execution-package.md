@@ -76,6 +76,14 @@ If Execution Type is not specified, it defaults to `Implementation`.
 | Engineering Approval | vQ |
 | Implementation Plan | vR |
 
+**Contract Dependencies** (optional — required when the referenced Technical Design declares contracts):
+
+| Contract | Required Version |
+|---|---|
+| [contract name] | [version] |
+
+When present, the package is valid only when all declared contract dependencies match their current versions. If the Technical Design contains a Contract Boundary Declaration, every execution package derived from it must declare its Contract Dependencies.
+
 If any source version does not match the current version of that artifact, the package is stale and the developer agent must reject it.
 
 ### 2. Task Definition

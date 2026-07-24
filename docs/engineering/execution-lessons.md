@@ -167,3 +167,31 @@ A lightweight record of what each iteration taught us. Not a framework document.
 - Escalation under ambiguous design
 - Refactoring workflow
 
+
+## Phase 2.1 — Contract Evolution (Selective Invalidation)
+
+### What was built
+
+- **Contract Boundary Declaration** — added as Section 4 to the Technical Design template (`sample.md`) and F-001's `technical-design.md`. Defines 3 contracts: API-F001-AUTH, DB-F001-AUTH, RT-F001-AUTH. Each names its sections, version, and consumers.
+- **Contract Dependencies** — added to execution package Metadata format (`.ai-execution/execution-package.md`). Conditionally required: if the Technical Design declares contracts, packages must declare dependencies.
+- **Additive invalidation** — extended `engineering-workflow.md` with contract-level staleness. `VALID = source versions match AND contract dependency versions match`. Document-level safety net retained.
+- **Independent version sequences** — documented: document version tracks the Technical Design; contract versions track specific obligations. No one-to-one relationship.
+- **Semantic versioning rule** — increment only when externally observable behavior or obligations change. Wording/examples/formatting do not trigger bumps.
+- **4 existing F-001 packages** — updated with Contract Dependencies matching their scope.
+- **4 test cases** — all pass. Selective invalidation works across all 3 directions.
+
+### Key design decisions
+
+- **Declared, not inferred** — AGENT-103 (Technical Planner) owns contract versioning. Planning owns meaning. No diff engines, no automatic calculation.
+- **Contract as obligation, not section group** — a contract represents a consumer-facing obligation. Sections are references to where that obligation is documented.
+- **Versioning ownership** — AGENT-103 increment decisions. If a contract's meaning changes → increment. If edits are outside declared contract sections → leave unchanged.
+- **No extracted contracts** — contracts remain declared inside the Technical Design. Extraction to `.ai-execution/contracts/` postponed until evidence demands it.
+
+### Validated
+
+✅ Technical Design declares contract boundaries
+✅ Execution packages declare contract dependencies
+✅ Staleness calculated at contract level, not document level
+✅ Unrelated domains remain valid after unrelated changes (tested 3 directions + editorial)
+✅ Technical Design remains source of truth
+✅ No new artifact types, agent types, or extraction infrastructure introduced
