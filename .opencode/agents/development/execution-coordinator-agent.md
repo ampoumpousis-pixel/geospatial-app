@@ -3,7 +3,7 @@ description: Execution Orchestrator. Coordinates execution state by transitionin
 mode: subagent
 temperature: 0.1
 steps: 15
-color: purple
+color: accent
 permission:
   read:
     "*": deny

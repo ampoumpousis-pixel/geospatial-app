@@ -443,6 +443,42 @@ docs(api): document resource creation endpoint
 
 ---
 
+# Origin-Agnostic Execution Rule
+
+Execution artifacts are origin-agnostic. Feature-originated and work-originated manifests must produce identical execution behavior. The execution pipeline (Execution Package Agent, Execution Coordinator, Developer Agents, Code Reviewer) does not branch on origin type.
+
+Origin metadata (the `source` field in the manifest) exists only for traceability and reporting. No downstream agent may use `source.type` to alter execution behavior.
+
+Consequences:
+- A work-originated manifest and a feature-originated manifest that produce the same task structure will execute identically.
+- The Execution Package Agent does not care whether the input came from a Feature Planner or a Work Request.
+- The Code Reviewer does not apply different standards based on origin.
+- Any agent observed branching on `source.type` is violating this rule.
+
+---
+
+# Command Gate Rule
+
+Commands select pipeline entry points. They do not implement workflow logic. Workflow behavior belongs to agents and execution artifacts.
+
+Valid commands:
+- parse input
+- locate or create artifacts
+- invoke agents
+- pass parameters
+- trigger approved flows
+
+Commands must never:
+- contain engineering logic
+- make architectural decisions
+- modify artifacts directly (beyond artifact creation for entry points like `/feature:create` and `/work:create`)
+- branch behavior based on origin type
+- hide workflow logic that belongs to agents
+
+The command layer is thin, declarative, and boring.
+
+---
+
 # Golden Rule
 
 Every task follows the full lifecycle.

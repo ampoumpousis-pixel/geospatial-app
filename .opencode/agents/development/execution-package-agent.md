@@ -3,7 +3,7 @@ description: Execution Package Agent. Transforms approved task-manifest.json int
 mode: subagent
 temperature: 0.1
 steps: 10
-color: teal
+color: info
 permission:
   read:
     "*": deny
