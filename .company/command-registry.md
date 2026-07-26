@@ -473,3 +473,31 @@ task-manifest.json              /work:execute
 2. Execution artifacts are origin-agnostic. Feature-originated and work-originated manifests must produce identical execution behavior. Origin metadata exists only for traceability and reporting.
 
 3. Composite commands are the product. Individual pipeline control commands are the mechanism. The normal developer experience uses user-facing commands only.
+
+---
+
+## Reserved Commands
+
+These command names are reserved for future implementation. They must not be used for unrelated purposes.
+
+### /lifecycle
+
+**Purpose:** Manage artifact lifecycle states for features and work items.
+
+**Sub-commands:**
+- `archive` — Move an artifact to archived state. Preserves all data, removes from active listings.
+- `unarchive` — Restore an archived artifact to its previous state.
+- `purge` — Destructive removal of all associated artifacts. Irreversible.
+
+**Aliases:**
+- `/feature:archive` → `/lifecycle archive`
+- `/feature:unarchive` → `/lifecycle unarchive`
+- `/feature:purge` → `/lifecycle purge`
+- `/work:archive` → `/lifecycle archive`
+- `/work:unarchive` → `/lifecycle unarchive`
+- `/work:purge` → `/lifecycle purge`
+
+**Status:** Reserved. Implemented after Phase 3 flight testing with F-002.
+**Design source:** Evidence collected during real feature work will define lifecycle semantics.
+
+**Command IDs:** CMD-216 through CMD-221 (held for `/lifecycle` sub-commands and aliases)
