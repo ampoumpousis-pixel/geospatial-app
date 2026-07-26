@@ -515,11 +515,12 @@ The following should remain manual:
 | 0. Pipeline Health Check | ✅ PASS | 2026-07-26 |
 | 1. Test C — Feature Regression | ✅ PASS | 2026-07-26 |
 | 2. Test A — Work Lifecycle | ✅ PASS | 2026-07-26 |
-| 3. Test E — Escalation Gate | ⬜ | |
-| 4. Test B — Complexity Routing | ⬜ | |
-| 5. Test D1 — Manifest Equivalence | ⬜ | |
-| 6. Test D2 — Execution Equivalence | ⬜ | |
-| 7. Negative Architecture Test | ⬜ | |
+| 3. Test E1 — Prevention Gate | ✅ PASS | 2026-07-26 |
+| 4. Test E2 — Escalation Pipeline | ✅ PASS | 2026-07-26 |
+| 5. Test B — Complexity Routing | ⬜ | |
+| 6. Test D1 — Execution Contract Equivalence | ⬜ | |
+| 7. Test D2 — Execution Layer Independence | ⬜ | |
+| 8. Negative Architecture Test | ⬜ | |
 
 **All tests passed:** ⬜
 
