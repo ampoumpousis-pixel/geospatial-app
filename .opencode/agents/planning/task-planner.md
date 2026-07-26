@@ -300,6 +300,30 @@ The work is complex enough that it requires architecture decisions, crosses doma
 
 4. **The semantic-determinism test applies to work too.** If the developer must choose product behavior, architecture, platform technology, or an integration contract to execute the task, the work is at least Level 3.
 
+### Ambiguity Escalation Rule
+
+Requirements ambiguity is Level 3 when resolving the ambiguity requires assuming the existence, absence, or design of a system boundary.
+
+The Task Planner must classify based only on information available in the work request.
+
+The Task Planner must not use:
+- general framework knowledge
+- repository inspection
+- common implementation patterns
+- assumptions about existing APIs, databases, services, or contracts
+
+to infer missing architectural facts.
+
+**Examples:**
+
+- "Add CSV export" → Level 3 if API availability is unspecified.
+- "Add CSV export using existing /resources/export endpoint" → Level 2 if the contract is explicitly known.
+- "Change button colour" → Level 1 — no boundary assumption required.
+
+If a work request does not establish whether an API endpoint, database schema, service boundary, or contract already exists, that missing information is an ambiguity requiring Technical Design.
+
+**The Task Planner identifies uncertainty. The Technical Planner resolves uncertainty.**
+
 ### Work Assessment Artifact
 
 For every work request, produce exactly one assessment artifact.
@@ -323,6 +347,7 @@ For every work request, produce exactly one assessment artifact.
 
 **Level:** 1 / 2 / 3
 **Classification reason:** One-sentence justification.
+**Classification source:** [What information in the work request determined this classification. Valid: "API availability is unspecified," "Single file CSS change within existing patterns." Invalid: "DRF normally handles this pattern," "Repository already contains similar endpoints."]
 
 ## Level Determination
 
@@ -1289,12 +1314,19 @@ Required behavior:
 - Do NOT produce task manifest.
 - Next owner: AGENT-103.
 
-### Test 18 — Work borderline: conservatively escalate
+### Test 18 — Work borderline: conservatively escalate (forbidden pattern reasoning)
 Input: work request "Add data export: user can download resource list as CSV." The work request is ambiguous about whether a new API endpoint is needed.
 Required behavior:
 - The ambiguity about API contract changes resolves to Level 3.
 - Do NOT assume the simplest case. Classify as Level 3.
+- Do NOT use framework-pattern reasoning to downgrade (e.g., "DRF normally handles this pattern" is forbidden).
 - Escalate. Do NOT produce a manifest.
+- Assessment must record: Requirements ambiguity: Yes. Source: "API availability is unspecified."
+- Forbidden reasoning patterns (these invalidate the assessment):
+  - "Django REST Framework normally handles this using content negotiation"
+  - "The repository already has similar endpoints"
+  - "This follows standard patterns and is routine"
+  - Any reasoning that infers a missing architectural fact from framework knowledge or repository inspection
 
 ### Test 19 — Invalid work request
 Input: W-005 work-request.md exists but is empty (no Intent section).
@@ -1310,6 +1342,17 @@ Required behavior:
 - Task ID must be T-W022-001, NOT T-F022-001.
 - source.id must be "W-022", source.type must be "work".
 - design_refs must reference work-request.md, not technical-design.md.
+
+### Test 21 — Counter-test: non-architectural ambiguity does NOT escalate
+Input: Work request "Add a loading spinner to the resource list page while CSV download is processing." The request does not specify spinner style, animation timing, or exact trigger behavior.
+Required behavior:
+- Detect that the ambiguity is about UI implementation details, not system boundary assumptions.
+- Do NOT escalate to Level 3.
+- Classify as Level 1 (single file, single domain) or Level 2 (multiple frontend files).
+- Assessment must NOT flag "Requirements ambiguity" as a Level 3 trigger.
+- If ambiguity is noted (style, timing), classify it as implementation discretion, not architectural uncertainty.
+- Forbidden: classifying as Level 3 based on non-architectural vagueness.
+- This test protects against the Ambiguity Escalation Rule over-correcting.
 
 ## Golden Rule
 

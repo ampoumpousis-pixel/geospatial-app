@@ -517,17 +517,70 @@ The following should remain manual:
 | 2. Test A — Work Lifecycle | ✅ PASS | 2026-07-26 |
 | 3. Test E1 — Prevention Gate | ✅ PASS | 2026-07-26 |
 | 4. Test E2 — Escalation Pipeline | ✅ PASS | 2026-07-26 |
-| 5. Test B — Complexity Routing | ⬜ | |
-| 6. Test D1 — Execution Contract Equivalence | ⬜ | |
-| 7. Test D2 — Execution Layer Independence | ⬜ | |
-| 8. Negative Architecture Test | ⬜ | |
+| 5. Test B — Complexity Routing | ✅ PASS WITH FINDING → RESOLVED | 2026-07-26 |
+| 6. Test D1 — Execution Contract Equivalence | ✅ PASS | 2026-07-26 |
+| 7. Test D2 — Execution Layer Independence | ✅ PASS WITH FINDING | 2026-07-26 |
+| 8. Negative Architecture Test | ✅ PASS | 2026-07-26 |
 
-**All tests passed:** ⬜
+**All tests passed:** ✅ **8/8**
 
-**Phase complete:** ⬜
+**Phase complete:** ✅ **Phase 2 validated**
 
 **Known limitations:**
 - AGENT-105 cannot write `task-manifest.json` directly due to subagent permission caching. JSON is embedded in `implementation-plan.md` and extracted by the command layer.
+
+### B4 Finding — Resolved
+
+**Test:** B4 — Boundary Ambiguity (W-TEST-006)
+
+**Initial result:** The Task Planner classified ambiguous work (API availability unspecified) as Level 2 using framework-pattern reasoning: "Django REST Framework normally handles this pattern." This violated the conservative escalation rule.
+
+**Root cause:** The Ambiguity Escalation Rule was missing from task-planner.md. The agent was not explicitly forbidden from inferring missing architectural facts from framework knowledge.
+
+**Resolution:**
+1. Ambiguity Escalation Rule added to task-planner.md — requirements ambiguity is Level 3 when resolving it requires assuming a system boundary
+2. Test 18 strengthened — explicit forbidden reasoning patterns (framework knowledge, repository inspection, common patterns)
+3. Test 21 (counter-test) added — non-architectural vagueness does NOT escalate
+4. Classification Source Assertion added to assessment template — reasoning must identify source of classification
+
+**Re-run result:** ✅ Level 3. Assessment documents: "Requirements ambiguity: Yes — API availability is unspecified." No manifest, no execution artifacts.
+
+**Counter-test (Test 21) result:** ✅ Level 2. Loading spinner ambiguity correctly flagged as implementation discretion.
+
+**Lesson:** This was a governance constraint, not an agent logic failure. The classification engine works correctly when the policy boundary is explicit and testable.
+
+### D1 Finding — Execution Contract Equivalence
+
+**Result:** ✅ PASS
+
+All four manifests (F-TEST-002, W-TEST-001, W-TEST-002, W-TEST-004):
+- Share `manifest_version: "1.0"` — no version drift
+- Have identical task object structures (all 13 required fields present)
+- Differ only in permitted metadata: `source.type`, `source.id`, `design_refs`, `contracts` (empty for work), task ID prefixes
+
+Schema version agreement confirmed. No path can silently emit a version the other rejects.
+
+### D2 Finding — Execution Layer Independence
+
+**Result:** ✅ PASS WITH FINDING
+
+The Execution Package Agent was tested with both a feature-origin manifest (F-TEST-002) and a work-origin manifest (W-TEST-004).
+
+**Behavioral finding:** The package generator does NOT branch on `source.type` for execution behavior. Task content (domain, executor, execution_type, files, allowed_writes) drives all package differences — not origin. Verification vs implementation tasks would differ identically regardless of origin.
+
+**Metadata finding:** The execution package template has a `Feature:` field that assumes feature origin. Work-origin tasks appear as `Feature: W-TEST-004` in the package metadata — a cosmetic mislabel. This does not change execution behavior but should be fixed.
+
+**Recommendation:** Rename the metadata field from `Feature:` to `Origin:` with a type subfield, or add a separate `Work:` field.
+
+### Negative Architecture Test
+
+**Result:** ✅ PASS
+
+Searched 14 files across the execution layer (development agents, review agents, .ai-execution framework) for origin-specific branching patterns: `source.type`, `if work`, `if feature`, `origin-specific`, `branch on`.
+
+14/14 files clean. One false positive in engineering-approval-review.md ("If source inspection is not permitted" — refers to code source inspection, not manifest origin type).
+
+**Conclusion:** The execution layer has zero origin-specific branching. Any future agent that introduces `if source.type` branching would be detected by this static check.
 
 **Evidence location:**
 
