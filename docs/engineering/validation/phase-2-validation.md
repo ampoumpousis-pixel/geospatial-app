@@ -519,7 +519,7 @@ The following should remain manual:
 | 4. Test E2 — Escalation Pipeline | ✅ PASS | 2026-07-26 |
 | 5. Test B — Complexity Routing | ✅ PASS WITH FINDING → RESOLVED | 2026-07-26 |
 | 6. Test D1 — Execution Contract Equivalence | ✅ PASS | 2026-07-26 |
-| 7. Test D2 — Execution Layer Independence | ✅ PASS WITH FINDING | 2026-07-26 |
+| 7. Test D2 — Execution Layer Independence | ✅ PASS WITH FINDING → RESOLVED | 2026-07-26 |
 | 8. Negative Architecture Test | ✅ PASS | 2026-07-26 |
 
 **All tests passed:** ✅ **8/8**
@@ -527,7 +527,7 @@ The following should remain manual:
 **Phase complete:** ✅ **Phase 2 validated**
 
 **Known limitations:**
-- AGENT-105 cannot write `task-manifest.json` directly due to subagent permission caching. JSON is embedded in `implementation-plan.md` and extracted by the command layer.
+- AGENT-105 cannot write `task-manifest.json` directly due to subagent permission caching. JSON is embedded in `implementation-plan.md` and extracted by the command layer. See `docs/engineering/constraints/subagent-permission-runtime.md` for details.
 
 ### B4 Finding — Resolved
 
@@ -562,15 +562,19 @@ Schema version agreement confirmed. No path can silently emit a version the othe
 
 ### D2 Finding — Execution Layer Independence
 
-**Result:** ✅ PASS WITH FINDING
+**Result:** ✅ PASS WITH FINDING → RESOLVED
 
 The Execution Package Agent was tested with both a feature-origin manifest (F-TEST-002) and a work-origin manifest (W-TEST-004).
 
-**Behavioral finding:** The package generator does NOT branch on `source.type` for execution behavior. Task content (domain, executor, execution_type, files, allowed_writes) drives all package differences — not origin. Verification vs implementation tasks would differ identically regardless of origin.
+**Behavioral finding:** The package generator does NOT branch on `source.type` for execution behavior.
 
-**Metadata finding:** The execution package template has a `Feature:` field that assumes feature origin. Work-origin tasks appear as `Feature: W-TEST-004` in the package metadata — a cosmetic mislabel. This does not change execution behavior but should be fixed.
+**Metadata finding — RESOLVED:** The template previously had a `Feature:` field that mislabeled work-origin tasks. This was replaced with an `Origin:` block containing `type` and `id`. Verification confirmed:
 
-**Recommendation:** Rename the metadata field from `Feature:` to `Origin:` with a type subfield, or add a separate `Work:` field.
+- Template layer: Zero remaining `Feature:` fields in `execution-package.md`
+- Generated artifact layer: `Origin:` with `type: feature|work` and `id: F-XXX|W-XXX`
+- Independence layer: Negative Architecture Test confirms no `origin.type` branching in execution agents
+
+The metadata header is now origin-agnostic. Origin is data carried through execution, not a control signal.
 
 ### Negative Architecture Test
 

@@ -45,8 +45,10 @@ Every Execution Package must contain all of the following sections. An incomplet
 ### 1. Metadata
 
 ```markdown
-Feature: F-XXX
-Task: T-FXXX-NNN
+Origin:
+  type: feature | work
+  id: F-XXX | W-XXX
+Task: T-FXXX-NNN | T-WXXX-NNN
 Package Version: 1.0
 Owner: Backend | Frontend | Infrastructure
 Execution Type: Implementation | Verification | Migration | Investigation | Spike
@@ -66,8 +68,9 @@ Created: YYYY-MM-DD
 
 If Execution Type is not specified, it defaults to `Implementation`.
 
-**Source Artifact Versions** (must match current versions):
+**Source Artifact Versions** (varies by origin — must match current versions):
 
+Feature origin:
 | Source Artifact | Required Version |
 |---|---|
 | Feature Specification | vN |
@@ -75,6 +78,23 @@ If Execution Type is not specified, it defaults to `Implementation`.
 | Engineering Review | vP |
 | Engineering Approval | vQ |
 | Implementation Plan | vR |
+
+Work origin (escalated):
+| Source Artifact | Required Version |
+|---|---|
+| Work Request | vN |
+| Technical Design | vM |
+| Engineering Review | vP |
+| Engineering Approval | vQ |
+| Implementation Plan | vR |
+
+Work origin (direct):
+| Source Artifact | Required Version |
+|---|---|
+| Work Request | vN |
+| Implementation Plan | vR |
+
+The Source Artifacts list in a generated package must include exactly the artifacts that exist for that origin — no more, no less.
 
 **Contract Dependencies** (optional — required when the referenced Technical Design declares contracts):
 
@@ -310,8 +330,10 @@ When creating a package, use this structure:
 
 ## Metadata
 
-Feature: F-XXX
-Task: T-FXXX-NNN
+Origin:
+  type: feature | work
+  id: F-XXX | W-XXX
+Task: T-FXXX-NNN | T-WXXX-NNN
 Package Version: 1.0
 Owner: Backend
 Status: Ready for Implementation
