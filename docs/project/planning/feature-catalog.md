@@ -383,6 +383,25 @@ Risks: None (no production impact)
 
 ---
 
+## F-TEST-002 — Test Feature Regression
+
+Description:
+Phase 2 command layer validation. Verify the feature pipeline produces correct artifacts.
+
+Business Value:
+Framework validation — no product value.
+
+Priority: Test
+
+Dependencies: None
+
+Acceptance Criteria:
+- Feature spec, technical design, engineering review, approval, and task manifest all produced
+
+Risks: None
+
+---
+
 # Priority Summary
 
 | Priority | Count | Features |
@@ -391,4 +410,4 @@ Risks: None (no production impact)
 | P1 | 5 | F-009, F-010, F-011, F-012, F-013 |
 | P2 | 5 | F-014, F-015, F-016, F-017, F-021 |
 | P3 | 3 | F-018, F-019, F-020 |
-| Test | 1 | F-TEST-001 |
+| Test | 2 | F-TEST-001, F-TEST-002 |

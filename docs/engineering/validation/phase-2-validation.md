@@ -23,6 +23,14 @@ Success criterion: The engineering platform exposes two independent planning ent
 
 ---
 
+## Platform Limitation
+
+The current subagent runtime does not reliably honour updated JSON file write permissions after agent definition changes. As a result, AGENT-105 (Task Planner) embeds the generated `task-manifest.json` content in `implementation-plan.md`, and the command layer extracts it into the canonical JSON artifact. This is a runtime constraint rather than an architectural limitation and affects both Feature and Work pipelines equally.
+
+All task-manifest.json artifacts referenced in this validation suite are produced via this extraction pattern unless otherwise noted.
+
+---
+
 ## Invariants Under Test
 
 1. **Two entry points** — Feature and Work request paths exist and produce compatible knowledge.
@@ -504,9 +512,9 @@ The following should remain manual:
 
 | Test | Status | Date |
 |------|--------|------|
-| 0. Pipeline Health Check | ⬜ | |
-| 1. Test C — Feature Regression | ⬜ | |
-| 2. Test A — Work Lifecycle | ⬜ | |
+| 0. Pipeline Health Check | ✅ PASS | 2026-07-26 |
+| 1. Test C — Feature Regression | ✅ PASS | 2026-07-26 |
+| 2. Test A — Work Lifecycle | ✅ PASS | 2026-07-26 |
 | 3. Test E — Escalation Gate | ⬜ | |
 | 4. Test B — Complexity Routing | ⬜ | |
 | 5. Test D1 — Manifest Equivalence | ⬜ | |
@@ -516,6 +524,9 @@ The following should remain manual:
 **All tests passed:** ⬜
 
 **Phase complete:** ⬜
+
+**Known limitations:**
+- AGENT-105 cannot write `task-manifest.json` directly due to subagent permission caching. JSON is embedded in `implementation-plan.md` and extracted by the command layer.
 
 **Evidence location:**
 

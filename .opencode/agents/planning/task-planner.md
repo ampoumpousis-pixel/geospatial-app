@@ -45,6 +45,11 @@ permission:
     "docs/engineering/task-plans/*/implementation-plan.md": allow
     "docs/engineering/task-plans/*/task-manifest.json": allow
     "docs/project/work/*/assessment.md": allow
+  write:
+    "*": deny
+    "docs/engineering/task-plans/**": allow
+    "docs/project/work/*/assessment.md": allow
+    "docs/project/work/*/work-request.md": allow
   glob:
     "*": deny
     ".ai-memory/**": allow
@@ -364,11 +369,15 @@ The work-request.md and assessment.md together form the handoff to AGENT-103 for
 
 ### Work Manifest Adaptation
 
-When a Level 1 or Level 2 work request produces a task manifest, the manifest uses `manifest_version: "1.1"` with a `source` field:
+When a Level 1 or Level 2 work request produces a task manifest, the manifest uses `manifest_version: "1.0"` with a `source` field added to the existing schema. This is backward compatible — the execution package agent reads `manifest_version: "1.0"` and ignores the optional `source` field.
 
 ```json
 {
-  "manifest_version": "1.1",
+  "manifest_version": "1.0",
+  "source_versions": {
+    "work_request": "1.0",
+    "implementation_plan": "1.0"
+  },
   "source": {
     "type": "work",
     "id": "W-XXX",
@@ -398,8 +407,9 @@ When a Level 1 or Level 2 work request produces a task manifest, the manifest us
 ```
 
 Key differences from a feature manifest:
-- `manifest_version: "1.1"` (feature manifests may remain at `"1.0"`)
+- Same `manifest_version: "1.0"` (downstream compatibility preserved)
 - `source.type: "work"` — passive metadata, not a branching signal
+- `source_versions` references work_request instead of feature artifacts
 - `contracts` may be empty (no Technical Design → no declared contracts)
 - `design_refs` references work-request.md sections, not Technical Design sections
 - Task IDs use `T-WXXX-NNN` naming (T-W001-001 of T-W022-003)
@@ -636,7 +646,14 @@ For Level 3 escalation, produce only the assessment. Do not create a task manife
 
 ### Directory Creation
 
-If the task-plan directory does not exist, create only that directory:
+If the task-plan directory does not exist, create it using the allowed bash command before writing artifacts.
+
+For the task-manifest.json, use the edit tool (not write tool). The edit tool can create new files when the directory already exists. The following edit permission has been granted:
+
+```text
+docs/engineering/task-plans/*/task-manifest.json      → edit: allow
+docs/project/work/*/assessment.md                      → edit: allow
+```
 
 Feature path:
 ```text
@@ -684,11 +701,11 @@ mkdir -p docs/engineering/task-plans/W-XXX
 }
 ```
 
-### Task Manifest Schema (manifest_version: "1.1" — Work)
+### Task Manifest Schema (manifest_version: "1.0" — Work)
 
 ```json
 {
-  "manifest_version": "1.1",
+  "manifest_version": "1.0",
   "source": {
     "type": "work",
     "id": "W-XXX",
@@ -1093,7 +1110,7 @@ Before marking as complete, verify every task is independently executable.
 - [ ] Complexity level correctly determined (all criteria checked, conservative on borderlines)
 - [ ] For Level 1 or 2: every task is determinate without making architecture, platform, or integration-contract choices
 - [ ] For Level 1 or 2: task IDs use correct T-WXXX-NNN naming
-- [ ] For Level 1 or 2: manifest_version is "1.1", source.type is "work"
+- [ ] For Level 1 or 2: manifest_version is "1.0", source.type is "work"
 - [ ] For Level 1 or 2: design_refs reference work-request.md sections
 - [ ] For Level 1 or 2: no parallel tasks modify the same file
 - [ ] For Level 1 or 2: dependency graph is acyclic
@@ -1132,7 +1149,7 @@ Before completion for a Work plan:
 - [ ] Assessment includes level determination table with all criteria populated
 - [ ] Classification level is supported by evidence (not assumed)
 - [ ] For Level 3: no task manifest was created
-- [ ] For Level 1 or 2: task-manifest.json was created with `manifest_version: "1.1"`
+- [ ] For Level 1 or 2: task-manifest.json was created with `manifest_version: "1.0"`
 - [ ] For Level 1 or 2: `source.type` is `"work"`
 - [ ] For Level 1 or 2: task IDs use `T-WXXX-NNN` naming
 - [ ] For Level 1 or 2: `design_refs` reference work-request.md, not Technical Design
@@ -1240,7 +1257,7 @@ Required behavior:
 - Work Input Validation passes (work-request.md exists).
 - Classify as Level 1 (single domain, ≤3 files, no contract changes).
 - Produce assessment.md with Level 1 disposition.
-- Produce task-manifest.json with manifest_version "1.1", source.type "work", one task (T-WXXX-001).
+- Produce task-manifest.json with manifest_version "1.0", source.type "work", one task (T-WXXX-001).
 - Task executor: frontend-implementation-agent.
 - Output "Work Complete — Level 1" console summary.
 
