@@ -52,10 +52,20 @@ When invoked:
 
 6. Activate AGENT-102 — Feature Planner.
    - Pass the assigned feature ID and the user's original description.
+   - Pass the operator-defined scope boundary if one is provided by the user.
+     If no explicit scope is provided, the catalogue entry is authoritative.
+   - Include the Scope Authority Rule (FI-G-001):
+     > The operator-defined scope takes precedence over the catalogue entry.
+     > You SHALL NOT expand beyond the operator-defined scope unless
+     > explicitly authorized. If you identify a gap between the catalogue
+     > and the operator scope, document it as an EAF but do not spec beyond
+     > the operator scope.
    - AGENT-102 performs product discovery and produces:
      ```
      docs/project/features/F-XXX/feature-spec.md
      ```
+   - The feature spec SHALL include a "Scope Comparison" section listing:
+     operator scope, spec scope, and any differences.
 
 7. Return the AGENT-102 console summary.
 

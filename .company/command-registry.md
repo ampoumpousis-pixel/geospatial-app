@@ -476,28 +476,42 @@ task-manifest.json              /work:execute
 
 ---
 
-## Reserved Commands
-
-These command names are reserved for future implementation. They must not be used for unrelated purposes.
+## Lifecycle Commands
 
 ### /lifecycle
 
 **Purpose:** Manage artifact lifecycle states for features and work items.
 
+**Status:** Implemented (Phase 3, F-002 evidence-driven).
+**Design source:** F-002 flight test. Superseded artifacts were overwritten (FI-G-002).
+  Artifact provenance could not be reconstructed without file header inspection (FI-G-003).
+  Changes between versions had to be manually computed.
+
 **Sub-commands:**
-- `archive` — Move an artifact to archived state. Preserves all data, removes from active listings.
-- `unarchive` — Restore an archived artifact to its previous state.
-- `purge` — Destructive removal of all associated artifacts. Irreversible.
+
+- `archive` — Move a superseded artifact to archived state. Preserves all data for
+  traceability, removes from active listings. Evidence: F-002 v1.0 TD and review
+  overwritten without backup. (CMD-216)
+- `trace` — Display the provenance chain for a feature or work item across all
+  pipeline stages (spec → EAF → TD → review → approval → manifest). Evidence:
+  F-002 provenance reconstruction required manual file inspection. (CMD-217)
+- `status` — Display which artifacts are current vs superseded for a feature or
+  work item. Evidence: F-002 revision loop made it impossible to know which
+  version was current without reading file metadata. (CMD-218)
+- `diff` — Compare two versions of the same artifact, showing changed sections.
+  Evidence: F-002 revision required orchestrator to manually reconstruct what
+  changed between TD v1.0 and v1.1. (CMD-219)
+
+**Deferred sub-commands** (no operational evidence yet):
+- `unarchive` — Awaiting operational need demonstrated by a future feature run.
+- `purge` — Awaiting operational need demonstrated by a future feature run.
 
 **Aliases:**
-- `/feature:archive` → `/lifecycle archive`
-- `/feature:unarchive` → `/lifecycle unarchive`
-- `/feature:purge` → `/lifecycle purge`
-- `/work:archive` → `/lifecycle archive`
-- `/work:unarchive` → `/lifecycle unarchive`
-- `/work:purge` → `/lifecycle purge`
+- `/feature:archive` → `/lifecycle archive` (CMD-220)
+- `/work:archive` → `/lifecycle archive` (CMD-221)
 
-**Status:** Reserved. Implemented after Phase 3 flight testing with F-002.
-**Design source:** Evidence collected during real feature work will define lifecycle semantics.
-
-**Command IDs:** CMD-216 through CMD-221 (held for `/lifecycle` sub-commands and aliases)
+**Command files:**
+- `.opencode/commands/lifecycle-archive.md`
+- `.opencode/commands/lifecycle-trace.md`
+- `.opencode/commands/lifecycle-status.md`
+- `.opencode/commands/lifecycle-diff.md`

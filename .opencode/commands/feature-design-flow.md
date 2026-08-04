@@ -69,20 +69,31 @@ When invoked:
 
 1. Present the user with:
    - Feature ID and title.
+   - The **operator-defined scope** (from the original command or Step 0 baseline).
+   - The **feature specification scope** (from `feature-spec.md` §10 In Scope / Out of Scope).
+   - Any **differences between operator scope and spec scope** (from `feature-spec.md` Scope Comparison section, per FI-G-004).
    - Technical Design summary (version, key decisions, contracts).
    - Engineering Review summary (recommendation, finding count, any notes).
    - Decision options: APPROVED / REQUEST CHANGES.
 
-2. If REQUEST CHANGES:
+2. Ask the user explicitly:
+
+   > "Does the feature specification match the authorized scope? If scope has
+   > expanded beyond the original operator input, do you authorize the new scope?"
+
+3. Record the scope decision in the approval artifact.
+
+4. If REQUEST CHANGES:
    - Record the reason.
    - Loop back to Phase A — Technical Design.
    - Inform the user that the pipeline will restart from Technical Design.
 
-3. If APPROVED:
+5. If APPROVED:
    - Record the decision:
      ```
      docs/engineering/approvals/F-XXX/engineering-approval.md
      ```
+   - Include in the approval artifact: scope comparison result and any scope expansion authorizations.
    - Proceed to Phase D.
 
 ### Phase D — Task Planning
