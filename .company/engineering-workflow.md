@@ -26,33 +26,37 @@ Every Feature Specification passes through a coordinated four-agent pipeline bef
 AGENT-103: Technical Design
     |
     v
+Frontend Integration Planner (only when Has User-Facing Surface: Yes)
+    |
+    v
 AGENT-104: Engineering Review
     |
-    +-- Revisions required --> AGENT-103
+    +-- Revisions required --> AGENT-103 or Frontend Integration Planner
     |
     v (Ready)
 Engineering Approval Gate
     |
-    +-- Changes requested --> AGENT-103
+    +-- Changes requested --> AGENT-103 or Frontend Integration Planner
     |
     v (Approved or Not Required)
 AGENT-105: Task Plan
     |
-    +-- Design gap found --> AGENT-103
+    +-- Design gap found --> AGENT-103 or Frontend Integration Planner
     |
     v (Plan ready)
 Implementation
 ```
 
-**Critical rule:** Every return to AGENT-103 creates a new Technical Design version, which **invalidates** the previous Engineering Review and Engineering Approval.
+**Critical rule:** Every return to AGENT-103 creates a new Technical Design version, which **invalidates** the previous Engineering Review and Engineering Approval. Every return to the Frontend Integration Planner creates a new Frontend Integration version, which invalidates the previous Engineering Review and Engineering Approval (while the Technical Design remains valid).
 
 ## Agent Roles in the Pipeline
 
 | Agent | Role | Input | Output |
 |---|---|---|---|
 | AGENT-103 | Technical Planner | Feature Specification | Technical Design |
-| AGENT-104 | Engineering Design Reviewer | Technical Design + Feature Specification | Engineering Review |
-| Engineering Approval Gate | Human/Policy Decision Gateway | Review + Design + Feature Specification | Engineering Approval |
+| Frontend Integration Planner | Frontend structural planner | Feature Spec + Technical Design (only when Has User-Facing Surface: Yes) | Frontend Integration |
+| AGENT-104 | Engineering Design Reviewer | Technical Design + Feature Spec (+ Frontend Integration) | Engineering Review |
+| Engineering Approval Gate | Human/Policy Decision Gateway | Review + Design + Feature Spec (+ Frontend Integration) | Engineering Approval |
 | AGENT-105 | Task Planner | All approved artifacts | Implementation Plan |
 
 ## Source Version Dependencies
@@ -63,10 +67,11 @@ Every artifact in the pipeline must record exactly which versions of upstream ar
 |---|---|
 | Feature Specification | Its own version |
 | Technical Design | Feature Specification version |
-| Engineering Review | Feature Specification version, Technical Design version |
-| Engineering Approval | Technical Design version, Engineering Review version |
-| Implementation Plan | Feature Specification version, Technical Design version, Engineering Review version, Engineering Approval version |
-| Execution Package | Feature Specification version, Technical Design version, Engineering Review version, Engineering Approval version, Implementation Plan version |
+| Frontend Integration | Feature Specification version, Technical Design version |
+| Engineering Review | Feature Specification version, Technical Design version, Frontend Integration version (when present) |
+| Engineering Approval | Technical Design version, Engineering Review version, Frontend Integration version (when present) |
+| Implementation Plan | Feature Specification version, Technical Design version, Frontend Integration version (when present), Engineering Review version, Engineering Approval version |
+| Execution Package | Feature Specification version, Technical Design version, Frontend Integration version (when present), Engineering Review version, Engineering Approval version, Implementation Plan version |
 
 ### Contract Dependencies (Phase 2.1+)
 
@@ -101,9 +106,30 @@ Consequences:
 
 - If a Technical Design is revised, the Engineering Review is stale.
 - If a Technical Design is revised after approval, the Engineering Approval is stale.
+- If a Frontend Integration is revised, the Engineering Review is stale.
+- If a Frontend Integration is revised after approval, the Engineering Approval is stale.
 - If a Feature Specification is updated, every downstream artifact is stale.
 - AGENT-105 must verify that every referenced source version matches before beginning task decomposition.
 - Stale artifacts require the owning agent to re-execute against the current upstream version.
+
+## Two-Track Invalidation Rule
+
+When a revision loop is triggered (REVISIONS REQUIRED from AGENT-104 or REQUEST CHANGES from the Engineering Approval Gate), the command layer determines which artifacts are stale and restarts from the owning phase:
+
+| Trigger | TD stale? | FIP stale? | Review stale? | Approval stale? | Restart from |
+|---|---|---|---|---|---|
+| Findings apply to Technical Design only | Yes | Yes | Yes | Yes | AGENT-103 |
+| Findings apply to Frontend Integration only | No | Yes | Yes | Yes | Frontend Integration Planner |
+| Findings apply to both | Yes | Yes | Yes | Yes | AGENT-103 |
+| No Frontend Integration (Has User-Facing Surface: No) | Yes | N/A | Yes | Yes | AGENT-103 |
+
+**Determining which artifact findings apply to:**
+- AGENT-104 classifies each Required Change with an `Applies to: Technical Design | Frontend Integration | Both` field in the review artifact.
+- The Engineering Approval Gate classifies REQUEST CHANGES the same way.
+- The command layer reads the union of all finding targets to determine staleness.
+- When only the Frontend Integration is stale, the Technical Design is NOT regenerated — the Frontend Integration Planner re-runs against the unchanged Technical Design.
+
+**Frontend-impact trigger:** The command layer reads `Has User-Facing Surface: Yes or No` from the Feature Specification metadata (set by AGENT-102). `Yes` requires the Frontend Integration artifact in the pipeline. `No` omits it — the pipeline operates exactly as before this stage existed. The decision is a read, never an inference.
 
 ## Revision and Return Protocol
 
@@ -117,6 +143,11 @@ AGENT-103 must accept four types of returns:
 | Review Findings | AGENT-104 | Design gaps, inconsistencies, or missing decisions |
 | Approval Change Request | Engineering Approval Gate | Human requests specific changes with stable IDs |
 | Design Gap Return (DGR) | AGENT-105 | Implementation detail missing from the design |
+
+The Frontend Integration Planner must also accept returns of the same types that apply to the Frontend Integration artifact:
+- Review Findings from AGENT-104 whose `Applies to` field targets the Frontend Integration
+- Approval Change Requests from the Engineering Approval Gate that target the Frontend Integration
+- Design Gap Returns (DGRs) from AGENT-105 whose missing detail is an unmapped page, component, API, or permission in the Frontend Integration
 
 ### Revision Rules
 

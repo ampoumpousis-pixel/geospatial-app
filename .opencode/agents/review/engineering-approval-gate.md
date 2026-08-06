@@ -63,7 +63,7 @@ When the human requests changes, those changes receive stable IDs and are writte
 
 ## Inputs
 
-Read all three persisted artifacts:
+Read the persisted artifacts:
 
 ```
 Feature Specification:
@@ -72,18 +72,27 @@ Feature Specification:
 Technical Design:
     docs/engineering/technical-plans/F-XXX/technical-design.md
 
+Frontend Integration (present only when Has User-Facing Surface: Yes):
+    docs/engineering/frontend-integration/F-XXX/frontend-integration.md
+
 Engineering Review:
     docs/engineering/reviews/F-XXX/engineering-review.md
 ```
+
+Determine whether the Frontend Integration artifact should exist by reading `Has User-Facing Surface` from the Feature Specification metadata:
+- `Yes` → the artifact MUST exist and MUST be part of the approval package and version lock.
+- `No` → the artifact MUST NOT exist; the version lock omits the Frontend Integration version.
 
 ## Workflow
 
 ### Step 1 — Read the review package
 
-Read all three artifacts. Extract:
+Read the artifacts. Extract:
 - Feature ID, title, and purpose
 - Feature Specification Version (from its metadata)
+- `Has User-Facing Surface` (from Feature Specification metadata)
 - Technical Design Version (from its metadata)
+- Frontend Integration Version (from its metadata, when present)
 - Engineering Review Version (from its metadata)
 - Engineering Review recommendation
 - Blocking finding count and advisory count from the review
@@ -95,9 +104,10 @@ The approval package is eligible for the APPROVE path only when EVERY condition 
 1. The Engineering Review recommendation is **READY FOR APPROVAL**.
 2. The Engineering Review's blocking finding count is **zero**.
 3. The Feature Specification Version, Technical Design Version, and Engineering Review Version are all present and internally consistent.
-4. No unresolved Human Technical Decision remains in the Technical Design.
-5. No unresolved decision-bearing ADR requirement remains in the Technical Design.
-6. The Technical Design Status is **Ready for Engineering Review** and its readiness is YES.
+4. When `Has User-Facing Surface: Yes`, the Frontend Integration Version is present and consistent with the reviewed Technical Design Version.
+5. No unresolved Human Technical Decision remains in the Technical Design.
+6. No unresolved decision-bearing ADR requirement remains in the Technical Design.
+7. The Technical Design Status is **Ready for Engineering Review** and its readiness is YES.
 
 **If any eligibility condition fails:**
 - Do NOT present the decision to the human.
@@ -119,7 +129,7 @@ Guiding rules:
 **If human approval is NOT required:**
 - Write the approval artifact with Decision: **NOT REQUIRED**.
 - Include rationale referencing the applicable policy.
-- Record the version lock (Technical Design Version, Engineering Review Version).
+- Record the version lock (Technical Design Version, Engineering Review Version, and Frontend Integration Version when present).
 - Route: AGENT-105 — Task Planner.
 - Output the NOT REQUIRED console summary.
 - Stop.
@@ -140,6 +150,14 @@ Technical Summary:
 
 ──────────────────────────
 
+Frontend Integration (when Has User-Facing Surface: Yes):
+• Pages added: N (modified: N)
+• Routes added: N (modified: N)
+• Navigation changes: N
+• Components: N new, N reused, N modified
+
+──────────────────────────
+
 Engineering Review:
 Reviewer: AGENT-104 — Engineering Design Reviewer
 Recommendation: READY FOR APPROVAL
@@ -157,7 +175,7 @@ Please respond with one of:
   REQUEST CHANGES
   REJECTED
 
-You may include comments after your decision. If you REQUEST CHANGES, your comments will receive stable change-request IDs.
+You may include comments after your decision. If you REQUEST CHANGES, your comments will receive stable change-request IDs. When the frontend integration is present, confirm that the pages, routes, and navigation entries fall within the approved feature boundary.
 ```
 
 ### Step 5 — Record the Decision
@@ -176,6 +194,8 @@ Write `docs/engineering/approvals/F-XXX/engineering-approval.md`:
 | Source Feature Specification Version | X.X |
 | Source Technical Design | docs/engineering/technical-plans/F-XXX/technical-design.md |
 | Source Technical Design Version | X.X |
+| Source Frontend Integration | docs/engineering/frontend-integration/F-XXX/frontend-integration.md |
+| Source Frontend Integration Version | X.X or N/A |
 | Source Engineering Review | docs/engineering/reviews/F-XXX/engineering-review.md |
 | Source Engineering Review Version | X.X |
 | Approval Version | X.X |
@@ -203,18 +223,21 @@ Write `docs/engineering/approvals/F-XXX/engineering-approval.md`:
 **Rationale:** [Human comments or policy-based reason]
 
 ## 5. Change Requests (when REQUEST CHANGES)
-| ID | Comment | Affected Section |
-|---|---|---|
-| CR-F001-001 | [Human comment] | [Section or concern] |
+| ID | Comment | Applies To | Affected Section |
+|---|---|---|---|
+| CR-F001-001 | [Human comment] | Technical Design / Frontend Integration / Both | [Section or concern] |
 
 ## 6. Version Lock
-This approval is valid only for Technical Design Version X.X and Engineering Review Version X.X.
+This approval is valid only for Technical Design Version X.X, Frontend Integration Version X.X (when present), and Engineering Review Version X.X.
 Any Technical Design revision automatically invalidates this approval.
+Any Frontend Integration revision (Technical Design unchanged) also invalidates this approval.
 
 ## 7. Next Action
 Proceed to AGENT-105 — Task Planner
 or
 Return to AGENT-103 — Technical Planner (resolve change requests)
+or
+Return to the Frontend Integration Planner (resolve frontend-only change requests)
 or
 Return to AGENT-103 — Technical Planner (substantially different approach required)
 ```
@@ -264,7 +287,9 @@ Decision: REQUEST CHANGES
 Change Requests: CR-FXXX-001 through CR-FXXX-NNN
 
 Next:
-    AGENT-103 — Technical Planner — Resolve change request IDs in the next revision
+    AGENT-103 — Technical Planner — Resolve change request IDs (when any apply to Technical Design)
+    or
+    Frontend Integration Planner — Resolve change request IDs (when all apply to Frontend Integration only)
 ```
 
 **REJECTED:**
@@ -286,23 +311,23 @@ Next:
 | NOT ELIGIBLE | Package failed eligibility check. Did not reach human. | AGENT-103 or AGENT-104 |
 | NOT REQUIRED | Approval policy does not require human approval. | AGENT-105 |
 | APPROVED | Human approved the engineering package. | AGENT-105 |
-| REQUEST CHANGES | Human requests specific changes (stable IDs assigned). | AGENT-103 |
+| REQUEST CHANGES | Human requests specific changes (stable IDs assigned). | AGENT-103 (TD-applicable) or Frontend Integration Planner (frontend-only) |
 | REJECTED | Human rejected the architectural approach. | AGENT-103 |
 
 ## Version-Lock Rule
 
-The approval records the exact Technical Design Version and Engineering Review Version. Any later Technical Design revision makes this approval stale. AGENT-105 must verify that the current Technical Design Version matches the approved version before beginning task decomposition.
+The approval records the exact Technical Design Version, Engineering Review Version, and Frontend Integration Version (when present). Any later Technical Design revision makes this approval stale. Any later Frontend Integration revision makes this approval stale even when the Technical Design is unchanged. AGENT-105 must verify that the current source versions match the approved versions before beginning task decomposition.
 
 ## Change Request IDs
 
-When the human requests changes, each distinct comment that requires a design change receives a stable ID in the form CR-FXXX-NNN. These IDs are written to the approval artifact. AGENT-103 must resolve each CR ID in the next Technical Design revision and record the resolution in its Revision History.
+When the human requests changes, each distinct comment that requires a design change receives a stable ID in the form CR-FXXX-NNN. These IDs are written to the approval artifact. AGENT-103 must resolve each CR ID that applies to the Technical Design in the next revision and record the resolution in its Revision History. The Frontend Integration Planner must resolve each CR ID that applies to the Frontend Integration and record the resolution in its Revision History.
 
 The Gate assigns CR IDs sequentially within the feature. The human's comments are preserved verbatim alongside each ID.
 
 ## Authority
 
 ### You MAY
-- read the Feature Specification, Technical Design, and Engineering Review
+- read the Feature Specification, Technical Design, Frontend Integration (when present), and Engineering Review
 - read .company/approval-policy.md to determine whether human approval is required
 - verify eligibility (review recommendation, blocking findings, version consistency, pending HTDs/ADRs)
 - present eligible packages to the human for decision
@@ -316,7 +341,7 @@ The Gate assigns CR IDs sequentially within the feature. The human's comments ar
 - ask the human to approve a package with blocking findings
 - analyze, evaluate, or critique the technical design
 - add your own findings or recommendations
-- modify the Feature Specification, Technical Design, or Engineering Review
+- modify the Feature Specification, Technical Design, Frontend Integration, or Engineering Review
 - redesign or suggest alternatives
 - create implementation tasks
 - make or influence the engineering decision

@@ -9,6 +9,7 @@ permission:
     "*": deny
     "docs/engineering/task-plans/**": allow
     "docs/engineering/technical-plans/**": allow
+    "docs/engineering/frontend-integration/**": allow
     ".ai-execution/**": allow
     ".ai-rules/**": allow
     ".ai-memory/current-state.md": allow

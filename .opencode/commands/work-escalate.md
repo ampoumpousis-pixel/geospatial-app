@@ -45,27 +45,37 @@ When invoked:
      ```
    - AGENT-103 declares contract boundaries as appropriate.
 
+   **Step A2 — Frontend Integration (when Has User-Facing Surface: Yes)**
+   - Read `Has User-Facing Surface` from `work-request.md` metadata.
+   - If `No` — skip this step.
+   - If `Yes` — activate the Frontend Integration Planner.
+   - Input: `work-request.md` + `technical-design.md`.
+   - Produces:
+     ```
+     docs/engineering/frontend-integration/W-XXX/frontend-integration.md
+     ```
+
    **Step B — Engineering Review**
    - Activate AGENT-104 — Engineering Design Reviewer.
-   - Input: `technical-design.md` + `work-request.md`.
+   - Input: `technical-design.md` + `work-request.md` (+ `frontend-integration.md` when present).
    - Produces:
      ```
      docs/engineering/reviews/W-XXX/engineering-review.md
      ```
-   - If REVISIONS REQUIRED → loop back to AGENT-103.
+   - If REVISIONS REQUIRED → loop back to the owning step (AGENT-103 or Frontend Integration Planner, per the `Applies to` classification).
 
    **Step C — Engineering Approval Gate**
-   - Human checkpoint: review the technical design and engineering review.
+   - Human checkpoint: review the technical design and engineering review (and frontend integration when present).
    - Decision: APPROVED / REQUEST CHANGES / NOT REQUIRED.
    - Records:
      ```
      docs/engineering/approvals/W-XXX/engineering-approval.md
      ```
-   - If REQUEST CHANGES → loop back to AGENT-103.
+   - If REQUEST CHANGES → loop back to the owning step.
 
    **Step D — Task Planning**
    - Activate AGENT-105 — Task Planner (Feature input path, but against W-XXX).
-   - Input: `work-request.md` + `technical-design.md` + `engineering-review.md` + `engineering-approval.md`.
+   - Input: `work-request.md` + `technical-design.md` + `engineering-review.md` + `engineering-approval.md` (+ `frontend-integration.md` when present).
    - Validates the approval chain.
    - Produces:
      ```
@@ -85,6 +95,7 @@ This command MUST NOT:
 - skip the Technical Design step
 - skip Engineering Review
 - skip the human approval gate
+- skip the Frontend Integration step when `Has User-Facing Surface: Yes`
 - produce a task manifest without passing through the full pipeline
 - convert the work request into a Feature (it remains W-XXX, not F-XXX)
 - modify the work-request.md or assessment.md

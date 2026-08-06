@@ -308,6 +308,7 @@ The artifact MUST use this structure.
 | Specification Version | 1.0 |
 | Source Request | Concise faithful request |
 | Domain Vocabulary Source | `PROJECT_GLOSSARY.md` and applicable project facts |
+| Has User-Facing Surface | Yes or No |
 | Related Features | IDs or None |
 | Affected Features | IDs or None |
 | Owner | AGENT-102 — Feature Planner |
@@ -395,6 +396,7 @@ Engineering questions do not belong here. Convert them to Engineering Attention 
 - [ ] Functional requirements are observable and testable
 - [ ] Acceptance criteria cover the functional requirements
 - [ ] Dependencies and related features are documented
+- [ ] `Has User-Facing Surface` is set based on user stories and capabilities
 - [ ] Product impact and risks are documented
 - [ ] Engineering Attention Flags contain no solutions
 - [ ] All required Human Decisions are resolved
@@ -405,6 +407,24 @@ Engineering questions do not belong here. Convert them to Engineering Attention 
 **Readiness reason:** One concise explanation.
 ```
 ## Content Rules
+### User-facing surface
+Set `Has User-Facing Surface` in the Metadata based on whether any user story, capability, or acceptance criterion implies direct user interaction.
+
+Set `Yes` when any user-facing behaviour exists, including:
+- viewing, browsing, or searching content
+- forms, wizards, or dialogs
+- file upload or download
+- dashboards, charts, or visualizations
+- notifications or alerts
+- settings, profile, or account management
+
+Set `No` only when the feature is purely backend, including:
+- storage or indexing optimisation with no UI
+- background processing with no user-facing surface
+- internal API changes with no user-facing consumer
+- data migration or backfill
+
+When uncertain, set `Yes`. The determination is a product question — never defer it to technical planning. The command layer reads this field to decide whether the Frontend Integration Planner runs.
 ### Functional requirements
 Requirements describe required product behavior.
 Correct:

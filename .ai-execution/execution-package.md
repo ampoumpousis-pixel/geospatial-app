@@ -75,6 +75,7 @@ Feature origin:
 |---|---|
 | Feature Specification | vN |
 | Technical Design | vM |
+| Frontend Integration | vF (present only when the feature has `Has User-Facing Surface: Yes`) |
 | Engineering Review | vP |
 | Engineering Approval | vQ |
 | Implementation Plan | vR |
@@ -94,7 +95,7 @@ Work origin (direct):
 | Work Request | vN |
 | Implementation Plan | vR |
 
-The Source Artifacts list in a generated package must include exactly the artifacts that exist for that origin — no more, no less.
+The Source Artifacts list in a generated package must include exactly the artifacts that exist for that origin — no more, no less. The Frontend Integration row is included only for feature-originated packages whose feature has a user-facing surface. Backend-only feature packages omit it. If a package references the Frontend Integration version, the version must match the current Frontend Integration version; a revised Frontend Integration makes any package stale that references the previous version.
 
 **Contract Dependencies** (optional — required when the referenced Technical Design declares contracts):
 
@@ -141,6 +142,10 @@ Technical Design References:
 - Section X.Y — [title] — [brief relevance]
 - Section A.B — [title] — [brief relevance]
 
+Frontend Integration References (when the package is for a frontend task):
+- Section N — [title] — [brief relevance: page, component, API mapping, or permission gate]
+- Frontend Integration sections are the authoritative source for page, route, component, and permission boundaries.
+
 Relevant Decisions (ADRs):
 - ADR-XXX — [title]
 
@@ -153,7 +158,7 @@ Dependencies:
 - [Upstream task ID] — [what it provides]
 ```
 
-The agent reads only the referenced design sections — not the entire Technical Design. Each reference must include the section identifier and a brief statement of why it is relevant to this task.
+The agent reads only the referenced design sections — not the entire Technical Design. Each reference must include the section identifier and a brief statement of why it is relevant to this task. Frontend packages reference the Frontend Integration sections that define the page, component, API mapping, and permission gate relevant to the task.
 
 ### 4. Standards Required
 

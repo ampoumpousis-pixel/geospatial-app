@@ -128,7 +128,8 @@ The backend agent may write only within the Allowed Writes listed in the package
 |---|---|---|---|
 | Execution Package | Package Author | Execution Context | Complete task universe with "Owner: Frontend" |
 | Implementation Plan task | Task Planner (AGENT-105) | Execution Planning | Frontend-specific task from the plan |
-| Technical Design sections | Technical Planner (AGENT-103) | Engineering | UI design, component architecture, state management, API contract sections |
+| Technical Design sections | Technical Planner (AGENT-103) | Engineering | API contract sections, component boundaries, permission definitions |
+| Frontend Integration sections | Frontend Integration Planner | Engineering | Structural truth: page inventory, component hierarchy, API-to-component mapping, permission gates, state ownership (when the package references it) |
 | Engineering standards | Standards (`.ai-rules/`) | Engineering | `.ai-rules/team/engineering-standards.md` (frontend-relevant sections) |
 | Testing standards | Standards (`.ai-rules/`) | Quality | `.ai-rules/testing/verification-rules.md` |
 

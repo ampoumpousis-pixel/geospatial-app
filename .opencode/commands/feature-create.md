@@ -66,6 +66,11 @@ When invoked:
      ```
    - The feature spec SHALL include a "Scope Comparison" section listing:
      operator scope, spec scope, and any differences.
+   - The feature spec Metadata SHALL include `Has User-Facing Surface: Yes or No`,
+     set by AGENT-102 based on whether any user story or capability implies direct
+     user interaction. This field is the deterministic signal the command layer
+     uses to decide whether the Frontend Integration Planner runs in
+     `/feature:design-flow`.
 
 7. Return the AGENT-102 console summary.
 

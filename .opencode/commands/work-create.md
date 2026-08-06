@@ -65,6 +65,7 @@ When invoked:
 | Created | [Current date] |
 | Status | Draft |
 | Version | 1.0 |
+| Has User-Facing Surface | Yes or No — Yes when the affected area(s) include frontend (pages, forms, views, UI); No for backend-only or infrastructure-only work |
 
 ## Intent
 

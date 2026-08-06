@@ -148,6 +148,9 @@ Feature Specification:
 Technical Design:
     docs/engineering/technical-plans/F-XXX/technical-design.md
 
+Frontend Integration (present only when Has User-Facing Surface: Yes):
+    docs/engineering/frontend-integration/F-XXX/frontend-integration.md
+
 Engineering Review:
     docs/engineering/reviews/F-XXX/engineering-review.md
 
@@ -157,8 +160,13 @@ Engineering Approval:
 
 The Feature Specification defines what to build.
 The Technical Design defines how to build it.
+The Frontend Integration defines the application's structural surface — pages, routes, components, API mapping, permission gates, and state ownership. It is the authoritative source for frontend task boundaries.
 The Engineering Review provides the technical evaluation.
 The Engineering Approval records the human decision or policy-based determination.
+
+Determine whether the Frontend Integration artifact should exist by reading `Has User-Facing Surface` from the Feature Specification metadata:
+- `Yes` → the artifact MUST exist, MUST be version-consistent, and MUST be the source of frontend task decomposition.
+- `No` → the artifact MUST NOT exist; frontend tasks do not exist for this feature.
 
 ### Work Path Input
 
@@ -180,14 +188,18 @@ Task Planning from the Feature path may begin only when every condition below pa
 - [ ] Technical design exists: `docs/engineering/technical-plans/F-XXX/technical-design.md`
 - [ ] Engineering review exists: `docs/engineering/reviews/F-XXX/engineering-review.md`
 - [ ] Engineering approval exists: `docs/engineering/approvals/F-XXX/engineering-approval.md`
+- [ ] When `Has User-Facing Surface: Yes` in the feature spec metadata: frontend integration exists: `docs/engineering/frontend-integration/F-XXX/frontend-integration.md`
+- [ ] When `Has User-Facing Surface: No`: frontend integration does NOT exist
 
 ### Feature ID consistency
-- [ ] All four artifacts reference the same Feature ID (F-XXX).
+- [ ] All artifacts reference the same Feature ID (F-XXX).
 
 ### Version matching
 - [ ] Engineering Review's Source Technical Design Version matches the current Technical Design Version.
 - [ ] Engineering Approval's Source Technical Design Version matches the current Technical Design Version.
 - [ ] Engineering Approval's Source Engineering Review Version matches the current Engineering Review Version.
+- [ ] When `Has User-Facing Surface: Yes`: Engineering Review's Source Frontend Integration Version matches the current Frontend Integration Version.
+- [ ] When `Has User-Facing Surface: Yes`: Engineering Approval's Source Frontend Integration Version matches the current Frontend Integration Version.
 
 ### Review recommendation
 - [ ] Engineering Review recommendation is READY FOR APPROVAL.
@@ -439,6 +451,8 @@ Key differences from a feature manifest:
 - `design_refs` references work-request.md sections, not Technical Design sections
 - Task IDs use `T-WXXX-NNN` naming (T-W001-001 of T-W022-003)
 
+Feature manifests: the `frontend_integration` entry in `source_versions` is present only when the feature's `Has User-Facing Surface: Yes`. Backend-only features omit it — the execution pipeline is origin-agnostic and never branches on its presence.
+
 Downstream execution agents do not branch on source.type. The task structure is identical.
 
 ## Design Gap Return (DGR)
@@ -481,12 +495,29 @@ Each DGR receives a stable ID in the form DGR-FXXX-NNN:
 
 ```markdown
 ### DGR-FXXX-001 — Title
-**Missing Design Detail:** What the Technical Design does not specify.
+**Missing Design Detail:** What the Technical Design or Frontend Integration does not specify.
 **Ambiguity:** Why the current design is not determinate.
 **Why Task Planning Is Blocked:** The concrete implementation choice that cannot be made without this detail.
-**Affected Design Sections:** Section numbers or IDs in the Technical Design.
-**Next Agent:** AGENT-103 — Technical Planner
+**Affected Design Sections:** Section numbers or IDs in the Technical Design or Frontend Integration.
+**Next Agent:** AGENT-103 — Technical Planner or Frontend Integration Planner
 ```
+
+### DGR Routing Disambiguation Rule
+
+When a DGR could belong to either the Technical Planner or the Frontend Integration Planner, apply this deterministic two-step test:
+
+1. Open the Technical Design at the referenced section or identifier.
+2. If the API, permission, or data model **does not exist** in the Technical Design → route to **AGENT-103 — Technical Planner** (the upstream contract is underspecified).
+3. If the API, permission, or data model **exists** in the Technical Design but is **not mapped** to a page or component in the Frontend Integration → route to the **Frontend Integration Planner** (the contract exists but the integration is incomplete).
+
+**Worked examples:**
+
+| Gap | Exists in TD? | In FIP? | Route to |
+|---|---|---|---|
+| Component has no API mapping | API-FXXX-001 exists in TD §10 | Not in FIP §11 | Frontend Integration Planner |
+| Component references an API whose response shape is undefined | No — TD §10 names the endpoint but no contract | N/A | Technical Planner |
+| Page gates on a permission never declared | No — TD §16 lacks it | N/A | Technical Planner |
+| Page has no declared components | N/A | FIP page with no hierarchy | Frontend Integration Planner |
 
 ### DGR Persistence
 
@@ -501,6 +532,7 @@ When DGRs exist, the implementation plan is **BLOCKED — DESIGN GAP**. Write th
 **Source Package Versions:**
 - Feature Specification: X.X
 - Technical Design: X.X
+- Frontend Integration: X.X or N/A
 - Engineering Review: X.X (Recommendation: READY FOR APPROVAL)
 - Engineering Approval: X.X (Decision: APPROVED / NOT REQUIRED)
 
@@ -514,7 +546,7 @@ When DGRs exist, the implementation plan is **BLOCKED — DESIGN GAP**. Write th
 
 ## Summary
 **DGR Count:** N
-**Next Owner:** AGENT-103 — Technical Planner
+**Next Owner:** AGENT-103 — Technical Planner or Frontend Integration Planner (per routing rule)
 ```
 
 **No partial task list is created.** If even one DGR is required, the entire plan is blocked. Do not produce tasks alongside DGRs.
@@ -564,10 +596,10 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 ## Workflow
 
 ### Phase 1 — Validate the approval chain
-1. derive the canonical paths for all four artifacts
-2. verify all four exist on the filesystem
-3. verify all four reference the same Feature ID
-4. verify source version pins match across the chain
+1. derive the canonical paths for all artifacts (including the frontend integration when `Has User-Facing Surface: Yes`)
+2. verify all required artifacts exist on the filesystem
+3. verify all artifacts reference the same Feature ID
+4. verify source version pins match across the chain (including the Frontend Integration version when present)
 5. verify the review recommendation is READY FOR APPROVAL with zero blocking findings
 6. verify the approval decision is APPROVED or NOT REQUIRED
 7. verify no unresolved HTDs, ADRs, or OTQs remain
@@ -576,10 +608,11 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 ### Phase 2 — Understand the approved design
 1. read the Technical Design in full
 2. read the Feature Specification for product context
-3. read the Engineering Review for advisory context
-4. read the Engineering Approval for any human notes
-5. identify the key components, APIs, data models, and integration points
-6. build a trace map from every Technical Design element to potential tasks
+3. when `Has User-Facing Surface: Yes`, read the Frontend Integration in full — it is the authoritative source for page, route, component, and permission boundaries
+4. read the Engineering Review for advisory context
+5. read the Engineering Approval for any human notes
+6. identify the key components, APIs, data models, integration points, and frontend structural elements
+7. build a trace map from every Technical Design and Frontend Integration element to potential tasks
 
 ### Phase 3 — Read source context
 1. read the relevant source code, tests, and configuration
@@ -600,17 +633,17 @@ Judge tasks by atomicity (one bounded concern), bounded context (fit in one agen
 3. ensure each task has a single responsible area
 4. define task IDs and descriptions
 5. identify files affected by each task (exact paths)
-6. **For frontend tasks that create or modify API-consuming components:** also identify integration dependencies outside the component directory:
+6. **For frontend tasks, derive page/component/route boundaries from the Frontend Integration artifact** (when present); also identify integration dependencies outside the component directory:
    - `App.tsx` or equivalent entry point (component must be imported and rendered)
-   - `vite.config.ts` or equivalent proxy configuration (API routes must reach backend)
+   - `vite.config.ts` for equivalent proxy configuration (API routes must reach backend)
    - Routing configuration files (if new routes are needed)
    These files must be listed in the task's `files` and `allowed_writes` — otherwise the developer agent cannot complete the feature end-to-end.
-7. trace each task to its Technical Design source (decision ID, component ID, section number)
-7. trace each task to its Feature Specification acceptance criteria
-8. read `docs/project/planning/trace-bullets.md` and check whether this feature maps to a trace bullet step
-9. if the feature is part of a trace bullet, identify the minimal task subset that implements the trace bullet path and mark it in the plan
-10. for each task, define developer-level verification (test commands, manual checks)
-11. do not accept blanket traceability claims like "covers all acceptance criteria" — require explicit mappings
+7. trace each task to its Technical Design source (decision ID, component ID, section number) and, for frontend tasks, to its Frontend Integration source (page ID, component ID, section number)
+8. trace each task to its Feature Specification acceptance criteria
+9. read `docs/project/planning/trace-bullets.md` and check whether this feature maps to a trace bullet step
+10. if the feature is part of a trace bullet, identify the minimal task subset that implements the trace bullet path and mark it in the plan
+11. for each task, define developer-level verification (test commands, manual checks)
+12. do not accept blanket traceability claims like "covers all acceptance criteria" — require explicit mappings
 
 ### Phase 6 — Build and validate the dependency graph
 1. determine execution order from the dependency graph
@@ -698,6 +731,7 @@ mkdir -p docs/engineering/task-plans/W-XXX
   "source_versions": {
     "feature_spec": "1.0",
     "technical_design": "1.0",
+    "frontend_integration": "1.0",
     "engineering_review": "1.0",
     "engineering_approval": "1.0",
     "implementation_plan": "1.0"
@@ -785,6 +819,7 @@ All artifacts derive from the same task decomposition and must be consistent.
 **Source Package Versions:**
 - Feature Specification: X.X
 - Technical Design: X.X
+- Frontend Integration: X.X or N/A
 - Engineering Review: X.X (Recommendation: READY FOR APPROVAL)
 - Engineering Approval: X.X (Decision: APPROVED / NOT REQUIRED)
 
