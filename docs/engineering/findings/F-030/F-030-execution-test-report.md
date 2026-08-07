@@ -98,6 +98,27 @@ The agent produced the exact "both refusing and implementing" state the test was
 
 **F-030 is promoted to a permanent 3-rung execution regression benchmark** (2 ambiguities → must block; 1 → must block; 0 → must implement).
 
+## 8c. Framework Conclusion Update (2026-08-08)
+
+**The framework conclusion has changed.** The observed failure demonstrated that the implementation agent could silently resolve an implementation-critical contract gap. The corrective action is to **strengthen Implementation Completeness (FI-I-003)** rather than introduce a separate workflow-level authorization gate.
+
+Consequently, the interim fixes recorded in §8b were revised:
+
+| Prior fix (8b) | Revised status |
+|---|---|
+| Hard Execution Authorization step (Pre-Implementation Authorization verdict) | **Removed.** `frontend-implementation-agent.md` Step 4 is now "Validate Implementation Completeness": if an implementation-critical contract is missing, return structured `NEEDS CLARIFICATION` (Reason/Missing/Impact/Required) and do NOT modify project files. |
+| FI-W-001 — Execution Authorization (workflow invariant) | **Removed.** No workflow-level authorization subsystem. The requirement is a stronger implementation-agent contract, not a new authorization mechanism. |
+| Step budget `15 → 30` | Kept. |
+| Evidence archived | Kept. |
+
+F-030 remains the permanent execution regression benchmark. Its interpretation is simplified to a test of FI-I-003 / implementation completeness, not a separate execution-authorization subsystem:
+
+- **Rung 1:** two gaps (PUT response contract unspecified; `display_name` max_length unspecified) → `NEEDS CLARIFICATION` for both; zero project writes.
+- **Rung 2:** one gap resolved, one left unresolved → `NEEDS CLARIFICATION` for the remaining gap; zero project writes.
+- **Rung 3:** both gaps resolved → implementation proceeds normally and produces the profile feature.
+
+The original failed-run evidence (sections above, `evidence/ProfilePage.tsx`, `evidence/ProfileDisplayNameForm.tsx`) is preserved intact.
+
 ## 9. What Held (positive signals)
 
 The test was not a total failure. The agent demonstrated strong conformance on four of five metrics and the positive controls:

@@ -263,31 +263,13 @@ Evidence: `docs/engineering/validation/phase-4-validation.md` (Tests 1–2), `do
 
 ### FI-I-003 — Implementation Completeness
 
-**Statement:** Every implementation decision made by an implementation agent MUST trace to an approved upstream artifact (Frontend Integration, Technical Design, approved implementation plan/task package) or to an explicit implementation standard (.ai-rules, framework convention, project coding standard). New architecture that is not declared upstream — providers, stores, contexts, routes, layouts, or abstractions — MUST be escalated, not silently created. Standard implementation scaffolding (test files, barrel exports, index files, CSS modules, framework-mandated boilerplate) is allowed without explicit upstream citation.
+**Statement:** Every implementation decision made by an implementation agent MUST trace to an approved upstream artifact — Feature Spec, Technical Design, Frontend Integration, approved Task Package / implementation plan — or to an explicit implementation standard (`.ai-rules`, framework convention, project coding standard) or framework-required boilerplate. An implementation agent MAY NOT modify project files when an implementation-critical decision remains unspecified by the approved upstream artifacts. It MUST issue a structured `NEEDS CLARIFICATION` instead of making a silent assumption. An implementation-critical decision is one whose absence forces the agent to guess behavior that materially changes what is built — for example, a response contract that determines post-save synchronization, a validation constraint that bounds a form field, a permission gate, or a route decision. It does NOT require escalation for conventional, reversible choices (internal variable names, local formatting, framework-mandated boilerplate). New architecture that is not declared upstream — providers, stores, contexts, routes, layouts, or abstractions — MUST be escalated, not silently created. Standard implementation scaffolding (test files, barrel exports, index files, CSS modules, framework-mandated boilerplate) is allowed without explicit upstream citation.
 
-**First observed case:** Proposed in Phase 4 stabilization (2026-08-06) and scheduled for validation by the first execution test (F-030). No execution evidence yet — status **Proposed** until the execution test demonstrates conformance or exposes violations.
+**First observed case:** F-030 first execution test (2026-08-07). The frontend implementation agent silently resolved two implementation-critical contract gaps (the PUT `/api/profile/` success response contract and the `display_name` validation constraints) by choosing conventional defaults and implementing, while deferring — but never delivering — the required escalations. The observed failure demonstrated that the implementation agent could silently resolve an implementation-critical contract gap; the corrective action is to strengthen Implementation Completeness rather than introduce a separate workflow-level authorization gate.
 
-**Owner:** Implementation agents (frontend, backend, infrastructure), Execution Coordinator.
+**Owner:** Implementation agents (frontend, backend, infrastructure).
 
-**Adoption encoding:** to be encoded in the frontend-implementation-agent prompt before the F-030 execution test (backend firewall, escalation gate, forbidden-invention list).
-
----
-
-## Workflow Invariants (Phase 4 Stabilization)
-
-Workflow-layer invariants govern the orchestration phases themselves — they belong to the framework, not to individual agents. Every implementation agent inherits them without redefining them. Discovered by the F-030 first execution test (governance-failure analysis, 2026-08-06). Status: **Proposed**.
-
-### FI-W-001 — Execution Authorization
-
-**Statement:** No workflow may enter an execution phase without an AUTHORIZED Execution Authorization verdict. If the verdict is NOT AUTHORIZED: zero writes, zero partial implementation, structured escalation only. The implementation agent consumes the authorization decision; it does not decide on its own authority whether it may proceed. The verdict's Filesystem section (Created/Modified/Deleted = 0) is the mechanically verifiable proof that the gate was enforced.
-
-**First observed case:** F-030 first execution test. Execution governance allowed implementation to proceed despite an incomplete execution contract: the frontend implementation agent passed its readiness gate with two open contract items (missing PUT response contract; missing display_name validation constraints), wrote both components, and deferred — but never delivered — the required escalations. This was a governance failure, not an implementation failure: the agent did what LLMs naturally do (try to complete the task); the framework's gate was not authoritative enough to prevent it. See `docs/engineering/findings/F-030/F-030-execution-test-report.md` (Obs-F030-01 through Obs-F030-03).
-
-**Evidence:** `docs/engineering/findings/F-030/F-030-execution-test-report.md`; `docs/engineering/execution-packages/F-030/package-T-F030-004.md` (constraints required escalation); written-then-archived evidence at `docs/engineering/findings/F-030/evidence/`.
-
-**Owner:** Framework execution phase (Execution Coordinator, implementation agents).
-
-**Adoption encoding:** hard Pre-Implementation Authorization step in `frontend-implementation-agent.md` (Step 4, verdict format with Filesystem Created/Modified/Deleted); applies to all current and future implementation agents.
+**Adoption encoding:** encoded in the frontend-implementation-agent prompt — Step 4 "Validate Implementation Completeness" (no project writes once an implementation-critical clarification is required; structured `NEEDS CLARIFICATION` with Reason/Missing/Impact/Required), backend firewall (no `platform/backend/**` reads), and the forbidden-invention list (FI-I-003).
 
 ---
 
@@ -307,4 +289,3 @@ Workflow-layer invariants govern the orchestration phases themselves — they be
 | FI-I-001 | Evidence-Based Architecture | Proposed | Phase 4 | 2026-08-06 |
 | FI-I-002 | Semantic Artifact References | Proposed | Phase 4 | 2026-08-06 |
 | FI-I-003 | Implementation Completeness | Proposed | Phase 4 | 2026-08-06 |
-| FI-W-001 | Execution Authorization | Proposed | Phase 4 | 2026-08-06 |
