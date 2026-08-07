@@ -170,7 +170,14 @@ Check which artifacts exist for the given feature ID:
 
 1. Feature spec directory: `docs/project/features/F-XXX/`
 2. Technical plan directory: `docs/engineering/technical-plans/F-XXX/`
-3. Feature catalog entry: `docs/project/planning/feature-catalog.md` — search for `## F-XXX` heading
+3. Frontend integration directory: `docs/engineering/frontend-integration/F-XXX/`
+4. Review directory: `docs/engineering/reviews/F-XXX/`
+5. Approval directory: `docs/engineering/approvals/F-XXX/`
+6. Task plan directory: `docs/engineering/task-plans/F-XXX/`
+7. Execution packages directory: `docs/engineering/execution-packages/F-XXX/`
+8. Execution state file: `docs/engineering/execution-state/F-XXX.json`
+9. Archive directory: `docs/engineering/archive/F-XXX/`
+10. Feature catalog entry: `docs/project/planning/feature-catalog.md` — search for `## F-XXX` heading
 
 If nothing exists in any location:
 
@@ -233,6 +240,13 @@ Display a summary of what will be affected:
 Will delete:
   ✓ docs/project/features/F-XXX/               (exists)
   ✗ docs/engineering/technical-plans/F-XXX/    (not found, skipped)
+  ✗ docs/engineering/frontend-integration/F-XXX/ (not found, skipped)
+  ✗ docs/engineering/reviews/F-XXX/            (not found, skipped)
+  ✗ docs/engineering/approvals/F-XXX/          (not found, skipped)
+  ✗ docs/engineering/task-plans/F-XXX/         (not found, skipped)
+  ✗ docs/engineering/execution-packages/F-XXX/ (not found, skipped)
+  ✗ docs/engineering/execution-state/F-XXX.json (not found, skipped)
+  ✗ docs/engineering/archive/F-XXX/            (not found, skipped)
   ✓ feature-catalog entry for F-XXX            (exists)
 
 ```
@@ -272,7 +286,63 @@ rm -rf docs/engineering/technical-plans/F-XXX/
 
 ```
 
-Skip any directory that does not exist. Do not error.
+6.3. Frontend integration directory:
+
+```
+
+rm -rf docs/engineering/frontend-integration/F-XXX/
+
+```
+
+6.4. Review directory:
+
+```
+
+rm -rf docs/engineering/reviews/F-XXX/
+
+```
+
+6.5. Approval directory:
+
+```
+
+rm -rf docs/engineering/approvals/F-XXX/
+
+```
+
+6.6. Task plan directory:
+
+```
+
+rm -rf docs/engineering/task-plans/F-XXX/
+
+```
+
+6.7. Execution packages directory:
+
+```
+
+rm -rf docs/engineering/execution-packages/F-XXX/
+
+```
+
+6.8. Execution state file:
+
+```
+
+rm -f docs/engineering/execution-state/F-XXX.json
+
+```
+
+6.9. Archive directory:
+
+```
+
+rm -rf docs/engineering/archive/F-XXX/
+
+```
+
+Skip any directory or file that does not exist. Do not error.
 
 
 ---
@@ -345,6 +415,13 @@ After all operations complete, verify:
 
 - `docs/project/features/F-XXX/` no longer exists
 - `docs/engineering/technical-plans/F-XXX/` no longer exists
+- `docs/engineering/frontend-integration/F-XXX/` no longer exists
+- `docs/engineering/reviews/F-XXX/` no longer exists
+- `docs/engineering/approvals/F-XXX/` no longer exists
+- `docs/engineering/task-plans/F-XXX/` no longer exists
+- `docs/engineering/execution-packages/F-XXX/` no longer exists
+- `docs/engineering/execution-state/F-XXX.json` no longer exists
+- `docs/engineering/archive/F-XXX/` no longer exists
 - `docs/project/planning/feature-catalog.md` no longer contains `## F-XXX`
 - Priority Summary counts are consistent with remaining features
 
@@ -365,6 +442,13 @@ Deleted:
 
 Not found (skipped):
   - docs/engineering/technical-plans/F-XXX/
+  - docs/engineering/frontend-integration/F-XXX/
+  - docs/engineering/reviews/F-XXX/
+  - docs/engineering/approvals/F-XXX/
+  - docs/engineering/task-plans/F-XXX/
+  - docs/engineering/execution-packages/F-XXX/
+  - docs/engineering/execution-state/F-XXX.json
+  - docs/engineering/archive/F-XXX/
 
 Updated:
   - feature-catalog priority summary

@@ -28,11 +28,13 @@ When invoked:
    ```
    docs/project/features/F-XXX/
    docs/engineering/technical-plans/F-XXX/
+   docs/engineering/frontend-integration/F-XXX/
    docs/engineering/reviews/F-XXX/
    docs/engineering/approvals/F-XXX/
    docs/engineering/task-plans/F-XXX/
    docs/engineering/execution-packages/F-XXX/
    ```
+   The frontend-integration directory exists only when `Has User-Facing Surface: Yes`; when absent for a surface=Yes feature, report it as a MISSING required artifact. For work items, the equivalent path is `docs/engineering/frontend-integration/W-XXX/`.
 2. For each artifact found, read the version from its header or metadata.
 3. Check the archive directory `docs/engineering/archive/F-XXX/` for archived versions.
 4. Classify each artifact:
@@ -52,6 +54,7 @@ When invoked:
    feature-spec.md           v1.0      CURRENT   docs/project/features/F-002/
    technical-design.md       v1.1      CURRENT   docs/engineering/technical-plans/F-002/
    technical-design.md       v1.0      ARCHIVED  docs/engineering/archive/F-002/.../
+   frontend-integration.md   v1.1      CURRENT   docs/engineering/frontend-integration/F-002/
    engineering-review.md     v2.0      CURRENT   docs/engineering/reviews/F-002/
    engineering-review.md     v1.0      ARCHIVED  docs/engineering/archive/F-002/.../
    engineering-approval.md   v1.0      CURRENT   docs/engineering/approvals/F-002/

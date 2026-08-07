@@ -30,6 +30,12 @@ When invoked:
    - An artifact type with two version numbers (e.g., `technical-design v1.0 v1.1`)
    - A feature ID and artifact type with version range (e.g., `F-002 td v1.0 v1.1`)
 
+   Supported artifact types include `feature-spec`, `technical-design`, `frontend-integration`,
+   `engineering-review`, `engineering-approval`, `implementation-plan`, `task-manifest`.
+   For frontend-integration, the current path is `docs/engineering/frontend-integration/F-XXX/frontend-integration.md`
+   and archived versions live under `docs/engineering/archive/F-XXX/engineering/frontend-integration/`.
+   `Has User-Facing Surface: Yes` features always have a frontend-integration version in the chain.
+
 2. Read both artifacts. If one is archived, locate it via the archive directory.
 
 3. Compare by sections (Markdown headings). For each section that appears in both

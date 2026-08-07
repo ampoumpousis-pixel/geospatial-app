@@ -358,6 +358,100 @@ Risks: Medium (GDAL dependency, tile generation performance for large rasters, t
 
 ---
 
+## F-022 — User Notifications
+
+Description:
+Users can see system-generated notifications, mark them as read, and configure notification preferences. Frontend surfaces: notification indicator (bell) in the application header, a Notification Center page, and a notification preferences section.
+
+Business Value:
+Keeps users informed about platform events without polling.
+
+Priority: Test (pipeline validation vehicle — isolated, not a dependency of other features)
+
+Dependencies: None (uses the platform User identity; does not depend on F-001 delivery)
+
+Related Requirements: None (test feature)
+
+Acceptance Criteria:
+- Users can view unread notification count
+- Users can view the notification list
+- Users can mark notifications as read
+- Users can configure notification preferences
+
+Risks: None (no production impact; cross-cutting frontend surface by design for planner testing)
+
+---
+
+## F-023 — Recent Activity Panel
+
+Description:
+Add a Recent Activity panel to the existing platform home page, showing a small list of recent platform events fetched from the backend.
+
+Business Value:
+Provides a lightweight at-a-glance activity overview on the existing home surface.
+
+Priority: Test (pipeline validation vehicle — isolated, not a dependency of other features)
+
+Dependencies: None
+
+Related Requirements: None (test feature)
+
+Acceptance Criteria:
+- Home page displays a Recent Activity panel
+- Panel fetches recent activity from a backend endpoint
+- No dedicated activity page or route is created
+
+Risks: None (no production impact)
+
+---
+
+## F-024 — Automatic Data Retention
+
+Description:
+Scheduled background job that expires and removes stale records (expired sessions, superseded temporary data) according to configured retention periods. Purely backend; no user-facing surface.
+
+Business Value:
+Keeps operational data bounded without manual cleanup.
+
+Priority: Test (pipeline validation vehicle — backend-only negative test for the frontend-integration trigger)
+
+Dependencies: None
+
+Related Requirements: None (test feature)
+
+Acceptance Criteria:
+- A scheduled retention job runs on a configured interval
+- Expired records are removed per retention policy
+- No user-facing surface exists
+
+Risks: None (no production impact)
+
+---
+
+## F-030 — User Display Name
+
+Description:
+Identified users can view and update their display name on a profile page. The profile page is a new surface reached via a local navigation link on the existing home page. Backend exposes GET /api/profile/ and PUT /api/profile/.
+
+Business Value:
+First execution-milestone test feature — validates the artifact-driven implementation pipeline on a minimal, isolated feature.
+
+Priority: Test (execution validation vehicle — isolated, no other feature depends on it)
+
+Dependencies: None
+
+Related Requirements: None (test feature)
+
+Acceptance Criteria:
+- A profile page exists at /profile
+- The home page links to the profile page
+- Users can view and update their display name
+- Only the authenticated user can modify their own display name
+
+Risks: None (no production impact)
+
+---
+
 ## F-TEST-001 — System Info Display (Pipeline Validation)
 
 Description:
@@ -410,4 +504,4 @@ Risks: None
 | P1 | 5 | F-009, F-010, F-011, F-012, F-013 |
 | P2 | 5 | F-014, F-015, F-016, F-017, F-021 |
 | P3 | 3 | F-018, F-019, F-020 |
-| Test | 2 | F-TEST-001, F-TEST-002 |
+| Test | 6 | F-022, F-023, F-024, F-030, F-TEST-001, F-TEST-002 |

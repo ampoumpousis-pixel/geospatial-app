@@ -15,6 +15,7 @@ permission:
     "docs/project/planning/feature-catalog.md": allow
     "docs/project/requirements/**": allow
     "docs/project/features/*/feature-spec.md": allow
+    "docs/project/features/*/authority-map.md": allow
   edit:
     "*": deny
     "docs/project/features/*/feature-spec.md": allow
@@ -385,13 +386,24 @@ Engineering questions do not belong here. Convert them to Engineering Attention 
 | Goal | User Story | Functional Requirement | Acceptance Criteria |
 |---|---|---|---|
 | G-FXXX-001 | US-FXXX-001 | FR-FXXX-001 | AC-FXXX-001 |
-## 22. Readiness Review
+## 22. Scope Comparison (FI-G-004)
+
+Compare the operator-defined scope (from the authority map or command) against the feature specification scope. List every difference and its authorization status.
+
+| Scope Dimension | Operator Scope | Specification Scope | Difference | Authorization |
+|---|---|---|---|---|
+| [capability 1] | [in/out/excluded] | [in/out] | None / [difference] | — / Authorized / Proposed as expansion (requires approval) |
+
+When no operator scope was declared, the catalogue scope is the baseline.
+
+## 23. Readiness Review
 - [ ] Problem and business value are clear
 - [ ] Domain terminology matches the project's ubiquitous language
 - [ ] Goals and success measures are defined
 - [ ] Users and stakeholders are identified
 - [ ] Business rules and assumptions are documented
 - [ ] Scope and out-of-scope boundaries are explicit
+- [ ] Scope Comparison section present with operator scope, spec scope, and differences
 - [ ] User stories are complete
 - [ ] Functional requirements are observable and testable
 - [ ] Acceptance criteria cover the functional requirements

@@ -228,6 +228,69 @@ prompt in `feature-create.md` requires Scope Comparison section in spec.
 
 ---
 
+## Frontend Integration Invariants (Phase 4)
+
+Discovered by the Phase 4 validation of the Frontend Integration Planner pipeline. Status: **Proposed**.
+Evidence: `docs/engineering/validation/phase-4-validation.md` (Tests 1–2), `docs/engineering/findings/F-022/F-022-flight-test-report.md`, `docs/engineering/findings/F-023/F-023-flight-test-report.md`.
+
+### FI-I-001 — Evidence-Based Architecture Invariant
+
+**Statement:** Any agent MAY declare reuse, existence, or non-existence of a page, component, service, or surface ONLY when inspection of the actual project state provides evidence for that declaration. Documented names, product areas, or architectural descriptions are hypotheses, not facts. If the actual state lacks a surface a document describes as existing, the agent MUST declare it new (or absent) and record the discrepancy rather than fabricate an evidence claim. This invariant applies to any agent consuming project artifacts, not only frontend planning.
+
+**First observed case:** Phase 4 F-022 flight test. The specification's product context described "application header", "user settings", and "dashboard" as existing product areas. The frontend scaffold contains none of them. The live planner verified the scaffold and declared AppHeader/AppLayout/Notification Center/preferences as NEW, citing the real candidates (apiClient, authService, theme, SystemInfo) with concrete reasons — no fabricated reuse. F-023 confirmed the complementary behaviour: the planner named the genuinely existing home page as the only reuse target for the panel.
+
+**Evidence:** `docs/engineering/frontend-integration/F-022/frontend-integration.md` §2/§14/§15 (verification statements, reuse candidates, rejection reasons, FD-F022-001); `docs/engineering/frontend-integration/F-023/frontend-integration.md` §14/§15 (FD-F023-001/003).
+
+**Owner:** Frontend Integration Planner (enforcement), Engineering Design Reviewer (independent verification — see Obs-F022-05: reviewer permission gap limits verification).
+
+**Adoption encoding:** proposed by the Phase 4 flight tests; the invariant is not yet encoded in the FIP prompt beyond the existing Reuse-first principle. Encoding options: require the FIP artifact to cite verified evidence per reuse claim; add reviewer source-inspection permission for `platform/frontend/**` to enable independent verification.
+
+---
+
+### FI-I-002 — Semantic Artifact References
+
+**Statement:** When an agent references another artifact's content, it SHALL locate the content by stable identifiers (e.g., `API-FXXX-001`, `CMP-FXXX-002`) or by heading semantics (e.g., "the Technical Design's API section"), never by document position number (e.g., "§10"). Position numbers drift when templates evolve; headings and identifiers are stable.
+
+**First observed case:** Phase 4 Obs-F022-04. The Frontend Integration Planner agent instructions hardcoded "Technical Design §10 (APIs)" and "§16 (permissions)"; the Technical Design template inserted a Contract Boundary Declaration section, shifting APIs to §11 and permissions to §17. The live planner adapted in its output, but the instructions remained stale and would mis-anchor future runs.
+
+**Evidence:** `docs/engineering/validation/phase-4-validation.md` Test 1 (Obs-F022-04); encoding fix applied 2026-08-06 (A1 stabilization).
+
+**Owner:** All agents that reference upstream artifacts (FIP, Engineering Reviewer, Task Planner).
+
+**Adoption encoding:** applied in the FIP, reviewer, and task-planner agent files (2026-08-06): positional `§N` TD references replaced with semantic headings.
+
+---
+
+### FI-I-003 — Implementation Completeness
+
+**Statement:** Every implementation decision made by an implementation agent MUST trace to an approved upstream artifact (Frontend Integration, Technical Design, approved implementation plan/task package) or to an explicit implementation standard (.ai-rules, framework convention, project coding standard). New architecture that is not declared upstream — providers, stores, contexts, routes, layouts, or abstractions — MUST be escalated, not silently created. Standard implementation scaffolding (test files, barrel exports, index files, CSS modules, framework-mandated boilerplate) is allowed without explicit upstream citation.
+
+**First observed case:** Proposed in Phase 4 stabilization (2026-08-06) and scheduled for validation by the first execution test (F-030). No execution evidence yet — status **Proposed** until the execution test demonstrates conformance or exposes violations.
+
+**Owner:** Implementation agents (frontend, backend, infrastructure), Execution Coordinator.
+
+**Adoption encoding:** to be encoded in the frontend-implementation-agent prompt before the F-030 execution test (backend firewall, escalation gate, forbidden-invention list).
+
+---
+
+## Workflow Invariants (Phase 4 Stabilization)
+
+Workflow-layer invariants govern the orchestration phases themselves — they belong to the framework, not to individual agents. Every implementation agent inherits them without redefining them. Discovered by the F-030 first execution test (governance-failure analysis, 2026-08-06). Status: **Proposed**.
+
+### FI-W-001 — Execution Authorization
+
+**Statement:** No workflow may enter an execution phase without an AUTHORIZED Execution Authorization verdict. If the verdict is NOT AUTHORIZED: zero writes, zero partial implementation, structured escalation only. The implementation agent consumes the authorization decision; it does not decide on its own authority whether it may proceed. The verdict's Filesystem section (Created/Modified/Deleted = 0) is the mechanically verifiable proof that the gate was enforced.
+
+**First observed case:** F-030 first execution test. Execution governance allowed implementation to proceed despite an incomplete execution contract: the frontend implementation agent passed its readiness gate with two open contract items (missing PUT response contract; missing display_name validation constraints), wrote both components, and deferred — but never delivered — the required escalations. This was a governance failure, not an implementation failure: the agent did what LLMs naturally do (try to complete the task); the framework's gate was not authoritative enough to prevent it. See `docs/engineering/findings/F-030/F-030-execution-test-report.md` (Obs-F030-01 through Obs-F030-03).
+
+**Evidence:** `docs/engineering/findings/F-030/F-030-execution-test-report.md`; `docs/engineering/execution-packages/F-030/package-T-F030-004.md` (constraints required escalation); written-then-archived evidence at `docs/engineering/findings/F-030/evidence/`.
+
+**Owner:** Framework execution phase (Execution Coordinator, implementation agents).
+
+**Adoption encoding:** hard Pre-Implementation Authorization step in `frontend-implementation-agent.md` (Step 4, verdict format with Filesystem Created/Modified/Deleted); applies to all current and future implementation agents.
+
+---
+
 ## Current Status Summary
 
 | ID | Name | Status | Phase | Adopted |
@@ -241,3 +304,7 @@ prompt in `feature-create.md` requires Scope Comparison section in spec.
 | FI-G-002 | Evidence Preservation | Validated | Phase 3 | 2026-07-27 |
 | FI-G-003 | Decision Traceability | Validated | Phase 3 | 2026-07-27 |
 | FI-G-004 | Explicit Scope Approval | Validated | Phase 3 | 2026-07-27 |
+| FI-I-001 | Evidence-Based Architecture | Proposed | Phase 4 | 2026-08-06 |
+| FI-I-002 | Semantic Artifact References | Proposed | Phase 4 | 2026-08-06 |
+| FI-I-003 | Implementation Completeness | Proposed | Phase 4 | 2026-08-06 |
+| FI-W-001 | Execution Authorization | Proposed | Phase 4 | 2026-08-06 |

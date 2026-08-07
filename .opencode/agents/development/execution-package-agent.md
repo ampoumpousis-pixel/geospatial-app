@@ -2,7 +2,7 @@
 description: Execution Package Agent. Transforms approved task-manifest.json into per-task execution packages following the execution-package.md format. Deterministic — reads structured data, fills a known template, writes files. No design decisions. Never creates new tasks or changes scope.
 mode: subagent
 temperature: 0.1
-steps: 10
+steps: 40
 color: info
 permission:
   read:

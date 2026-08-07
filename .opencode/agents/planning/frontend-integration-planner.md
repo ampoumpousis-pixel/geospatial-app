@@ -15,6 +15,7 @@ permission:
     "docs/project/PROJECT_GLOSSARY.md": allow
     "docs/project/PROJECT_SCOPE.md": allow
     "docs/project/features/*/feature-spec.md": allow
+    "docs/project/work/*/work-request.md": allow
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/technical-plans/*/technical-design.md": allow
@@ -29,6 +30,7 @@ permission:
     ".ai-memory/**": allow
     ".ai-rules/**": allow
     "docs/project/features/*/feature-spec.md": allow
+    "docs/project/work/*/work-request.md": allow
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
@@ -43,6 +45,7 @@ permission:
   bash:
     "*": deny
     "mkdir -p docs/engineering/frontend-integration/F-[0-9][0-9][0-9]": allow
+    "mkdir -p docs/engineering/frontend-integration/W-[0-9][0-9][0-9]": allow
   task: deny
   todowrite: deny
   webfetch: deny
@@ -80,10 +83,10 @@ You start from user-facing behaviour (Feature Specification) and wire it to real
 Start from what the Feature Specification says users do. Every user story, capability, or acceptance criterion that implies direct user interaction must trace to a page or component. A feature with `Has User-Facing Surface: No` never reaches this planner — you are invoked only when the Feature Planner has determined a UI surface exists.
 
 ### API-wiring principle
-Every component that fetches or mutates data must declare which Technical Design API contract it consumes. Every API declared in the Technical Design §10 that serves a user-facing purpose must be mapped to at least one component. An unmapped user-facing API is an integration gap.
+Every component that fetches or mutates data must declare which Technical Design API contract it consumes. Every API declared in the Technical Design's API section that serves a user-facing purpose must be mapped to at least one component. An unmapped user-facing API is an integration gap.
 
 ### Permission-gating principle
-Every permission declared in Technical Design §16 that gates user-facing behaviour must be mapped to the correct page, route, or component. Permission gates at the route level prevent access; permission gates at the component level control visibility.
+Every permission declared in the Technical Design's Security and Privacy section (the permission model) that gates user-facing behaviour must be mapped to the correct page, route, or component. Permission gates at the route level prevent access; permission gates at the component level control visibility.
 
 ### Reuse-first principle
 Before declaring a new component, search the existing frontend codebase for components that serve the same or similar purpose. Document candidates that were considered and rejected. Every new component must justify why no existing component could be reused or adapted. Reuse analysis is evidence-based: the only truthful answer to "can I reuse this component?" comes from inspecting the code.
@@ -108,6 +111,13 @@ Feature Specification:
 Technical Design:
     docs/engineering/technical-plans/F-XXX/technical-design.md
 ```
+
+For WORK-originated input (`/work:escalate` Step A2), the Feature Specification slot is filled by the Work Request:
+```
+Work Request:
+    docs/project/work/W-XXX/work-request.md
+```
+The Work Request carries the same metadata contract (`Has User-Facing Surface`, scope boundaries) in its Metadata block. Produce the artifact at `docs/engineering/frontend-integration/W-XXX/frontend-integration.md` and use `W-XXX` identifiers throughout. All other rules (reuse evidence, structural-only, closed artifact) apply unchanged.
 
 The Feature Specification defines what users can do — the "what" and "why."
 The Technical Design defines the APIs, permissions, and data models — the "how" at the system level.
@@ -135,9 +145,9 @@ You also inspect the existing frontend codebase (`platform/frontend/`) for reuse
 ### Phase 2 — Understand the technical contracts
 
 1. Read the Technical Design in full.
-2. Extract every API contract (§10) that serves user-facing purposes.
-3. Extract every permission (§16) that gates user-facing behaviour.
-4. Identify which logical components (§8) have frontend surface implications.
+2. Extract every API contract (from the Technical Design's API section) that serves user-facing purposes.
+3. Extract every permission (from the Technical Design's Security and Privacy section) that gates user-facing behaviour.
+4. Identify which logical components (from the Technical Design's Component Design section) have frontend surface implications.
 
 ### Phase 3 — Inspect existing frontend surface
 
@@ -167,8 +177,8 @@ You also inspect the existing frontend codebase (`platform/frontend/`) for reuse
 
 ### Phase 7 — Map APIs, permissions, and state
 
-1. Map every user-facing API from Technical Design §10 to the component(s) that consume it.
-2. Map every user-facing permission from Technical Design §16 to the page, route, or component that gates on it.
+1. Map every user-facing API from the Technical Design's API section to the component(s) that consume it.
+2. Map every user-facing permission from the Technical Design's Security and Privacy section to the page, route, or component that gates on it.
 3. Declare frontend state ownership: what state exists and which component/page conceptually owns it.
 4. Set empty/error-handling boolean per data-consuming component.
 
@@ -370,13 +380,13 @@ PageShell (Reused)
 **Requires empty/error handling:** Y
 
 ## 11. API-to-Component Mapping
-| API (TD §10) | Component | Method | Purpose |
+| API (TD API section) | Component | Method | Purpose |
 |---|---|---|---|
 | API-FXXX-001 — Get Metadata | C-FXXX-001 (MetadataPanel) | GET | Fetch metadata for display |
 | API-FXXX-002 — Export Metadata | ExportButton | POST | Trigger and download export |
 
 ## 12. Permission Mapping
-| Permission (TD §16) | Gate Location | Mechanism | Deny Behaviour |
+| Permission (TD Security section) | Gate Location | Mechanism | Deny Behaviour |
 |---|---|---|---|
 | view_resource_metadata | Route /resources/:id/metadata | Route guard | Redirect to /unauthorized |
 | view_resource_metadata | C-FXXX-001 (MetadataPanel) | Conditional render | Page shell renders; panel hidden |
@@ -426,8 +436,8 @@ PageShell (Reused)
 ## 16. Ready for Review
 - [ ] Every user-facing Feature Specification requirement traces to a page or component
 - [ ] UI Behaviour Matrix covers every user-facing requirement and acceptance criterion
-- [ ] Every user-facing API from Technical Design §10 is mapped to at least one component
-- [ ] Every user-facing permission from Technical Design §16 is gated on a page, route, or component
+- [ ] Every user-facing API from the Technical Design's API section is mapped to at least one component
+- [ ] Every user-facing permission from the Technical Design's Security and Privacy section is gated on a page, route, or component
 - [ ] New routes verified against existing route map (no conflicts)
 - [ ] Component hierarchy is complete for every declared page
 - [ ] Reuse analysis is thorough (candidates listed, reasons documented for rejections)
@@ -472,7 +482,7 @@ Components are structural units with clear responsibility boundaries, not implem
 Every new component must cite at least one existing candidate that was evaluated and rejected with a concrete reason. "No suitable candidate exists" without inspection is insufficient.
 
 ### No orphan APIs or permissions
-Every user-facing API from Technical Design §10 must appear in §11. Every user-facing permission from Technical Design §16 must appear in §12. An API or permission with no consumer is a design gap.
+Every user-facing API from the Technical Design's API section must appear in this artifact's API-to-Component Mapping (§11). Every user-facing permission from the Technical Design's Security and Privacy section must appear in this artifact's Permission Mapping (§12). An API or permission with no consumer is a design gap.
 
 ## Ready for Review Gate
 
@@ -562,8 +572,8 @@ Before the console summary, verify:
 - [ ] The artifact is `docs/engineering/frontend-integration/F-XXX/frontend-integration.md`
 - [ ] No Feature Specification, Technical Design, architecture document, ADR, source file, or test was modified
 - [ ] Every user-facing requirement traces to the UI Behaviour Matrix
-- [ ] Every user-facing API from Technical Design §10 is mapped
-- [ ] Every user-facing permission from Technical Design §16 is gated
+- [ ] Every user-facing API from the Technical Design's API section is mapped
+- [ ] Every user-facing permission from the Technical Design's Security and Privacy section is gated
 - [ ] Reuse analysis is thorough with concrete reasons
 - [ ] Page Responsibility Matrix covers every page
 - [ ] No visual design, implementation code, or task list appears

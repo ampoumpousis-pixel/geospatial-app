@@ -514,9 +514,9 @@ When a DGR could belong to either the Technical Planner or the Frontend Integrat
 
 | Gap | Exists in TD? | In FIP? | Route to |
 |---|---|---|---|
-| Component has no API mapping | API-FXXX-001 exists in TD §10 | Not in FIP §11 | Frontend Integration Planner |
-| Component references an API whose response shape is undefined | No — TD §10 names the endpoint but no contract | N/A | Technical Planner |
-| Page gates on a permission never declared | No — TD §16 lacks it | N/A | Technical Planner |
+| Component has no API mapping | API-FXXX-001 exists in TD's API section | Not in FIP API-to-Component Mapping | Frontend Integration Planner |
+| Component references an API whose response shape is undefined | No — TD's API section names the endpoint but no contract | N/A | Technical Planner |
+| Page gates on a permission never declared | No — TD's Security and Privacy section lacks it | N/A | Technical Planner |
 | Page has no declared components | N/A | FIP page with no hierarchy | Frontend Integration Planner |
 
 ### DGR Persistence

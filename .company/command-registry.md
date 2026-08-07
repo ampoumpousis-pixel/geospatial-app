@@ -37,7 +37,8 @@ The normal developer experience. These are the primary interface.
 | Command | Invokes | Creates | Next |
 |---------|---------|---------|------|
 | `/feature:create` | AGENT-102 Feature Planner | `feature-spec.md` | `/feature:design-flow` |
-| `/feature:design-flow` | AGENT-103 → 104 → Gate → 105 | `technical-design.md`, `implementation-plan.md`, `task-manifest.json` | `/feature:exec-flow` |
+| `/feature:design-flow` | AGENT-103 → FIP (when surface=Yes) → 104 → Gate → 105 | `technical-design.md`, `frontend-integration.md` (when surface=Yes), `implementation-plan.md`, `task-manifest.json` | `/feature:exec-flow` |
+| `/feature:frontend-integration` | Frontend Integration Planner | `frontend-integration.md` | `/feature:design-flow` (review onward) |
 | `/feature:exec-flow` | Validate → Package → Run | `execution-packages`, `execution-state` | `/status` |
 | `/work:create` | None (artifact creation) | `work-request.md` | `/work:execute` |
 | `/work:execute` | AGENT-105 Task Planner → Execution pipeline | `assessment.md`, `task-manifest.json` | `/status` |
@@ -111,27 +112,61 @@ AGENT-103 (Technical Planner)
     ├── Produces technical-design.md
     ├── Declares contract boundaries
     ↓
+Frontend Integration Planner (only when Has User-Facing Surface: Yes)
+    ├── Reads feature-spec.md + technical-design.md
+    ├── Produces frontend-integration.md
+    ↓
 AGENT-104 (Engineering Design Reviewer)
-    ├── Reads technical-design.md + feature-spec.md
+    ├── Reads technical-design.md + feature-spec.md (+ frontend-integration.md)
     ├── Produces engineering-review.md
-    ├── If REVISIONS REQUIRED → loops back to AGENT-103
+    ├── If REVISIONS REQUIRED → loops back to AGENT-103 or FIP (per Applies-to field)
     ↓
 Engineering Approval Gate (Human checkpoint)
-    ├── Human reviews design + review
+    ├── Human reviews design + review (+ frontend integration)
     ├── Decision: APPROVED / REQUEST CHANGES / NOT REQUIRED
-    ├── If REQUEST CHANGES → loops back to AGENT-103
+    ├── If REQUEST CHANGES → loops back to AGENT-103 or FIP
     ↓
 AGENT-105 (Task Planner)
-    ├── Validates approval chain
+    ├── Validates approval chain (incl. Frontend Integration version)
     ├── Decomposes design into tasks
     ├── Produces implementation-plan.md + task-manifest.json
     ↓
 STOP
 ```
 
-**Creates:** `technical-design.md`, `engineering-review.md`, `engineering-approval.md`, `implementation-plan.md`, `task-manifest.json`
+**Creates:** `technical-design.md`, `frontend-integration.md` (when surface=Yes), `engineering-review.md`, `engineering-approval.md`, `implementation-plan.md`, `task-manifest.json`
 
 **Next:** `/feature:exec-flow F-XXX`
+
+---
+
+### /feature:frontend-integration
+
+**Command ID:** CMD-215
+
+**Purpose:** Create or regenerate the Frontend Integration artifact independently. Standalone pipeline control — recovery, re-execution, or regeneration when the Frontend Integration is stale (two-track invalidation track B) against an unchanged Technical Design.
+
+**Invokes:** Frontend Integration Planner only.
+
+**Input:** F-XXX (feature spec must declare `Has User-Facing Surface: Yes`).
+
+**Flow:**
+
+```
+Verify feature-spec.md exists and declares Has User-Facing Surface: Yes
+    ↓
+Verify technical-design.md exists
+    ↓
+Frontend Integration Planner
+    ├── Reads feature-spec.md + technical-design.md
+    ├── Produces frontend-integration.md
+    ↓
+STOP (Next: /feature:design-flow F-XXX to continue review onward)
+```
+
+**Creates:** `docs/engineering/frontend-integration/F-XXX/frontend-integration.md`
+
+**MUST NOT:** run AGENT-103/104/105, invoke the approval gate, or modify any other artifact.
 
 ---
 
@@ -253,6 +288,10 @@ AGENT-103 (Technical Planner)
     ├── Declares contract boundaries
     ├── Produces technical-design.md at docs/engineering/technical-plans/W-XXX/
     ↓
+Frontend Integration Planner (only when Has User-Facing Surface: Yes)
+    ├── Reads work-request.md + technical-design.md
+    ├── Produces frontend-integration.md at docs/engineering/frontend-integration/W-XXX/
+    ↓
 AGENT-104 (Engineering Design Reviewer)
     ├── Reviews the design
     ├── Produces engineering-review.md
@@ -268,7 +307,7 @@ AGENT-105 (Task Planner)
 STOP (ready for /work:execute W-XXX to continue to execution)
 ```
 
-**Creates:** `technical-design.md`, `engineering-review.md`, `engineering-approval.md`, updated `task-manifest.json`
+**Creates:** `technical-design.md`, `frontend-integration.md` (when surface=Yes), `engineering-review.md`, `engineering-approval.md`, updated `task-manifest.json`
 
 **Next:** `/work:execute W-XXX`
 

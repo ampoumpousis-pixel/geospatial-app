@@ -20,6 +20,8 @@ permission:
     "docs/project/planning/trace-bullets.md": allow
     "docs/project/requirements/**": allow
     "docs/project/features/*/feature-spec.md": allow
+    "docs/project/work/*/work-request.md": allow
+    "docs/project/work/*/assessment.md": allow
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
@@ -49,6 +51,8 @@ permission:
     ".ai-rules/**": allow
     "docs/project/requirements/**": allow
     "docs/project/features/*/feature-spec.md": allow
+    "docs/project/work/*/work-request.md": allow
+    "docs/project/work/*/assessment.md": allow
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow

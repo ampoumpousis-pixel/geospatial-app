@@ -1,0 +1,393 @@
+original_path: docs/engineering/frontend-integration/F-022/frontend-integration.md
+version: 1.0
+archived_at: 2026-08-06T18:00:00Z
+reason: Superseded by version 1.1 (two-track invalidation test — frontend-integration-only revision loop)
+
+# F-022 — User Notifications — Frontend Integration
+
+## 1. Metadata
+
+| Field | Value |
+|---|---|
+| Feature ID | F-022 |
+| Source Feature Specification | docs/project/features/F-022/feature-spec.md |
+| Source Feature Specification Version | 1.0 |
+| Source Technical Design | docs/engineering/technical-plans/F-022/technical-design.md |
+| Source Technical Design Version | 1.0 |
+| Frontend Integration Version | 1.0 |
+| Superseded Version | None |
+| Owner | Frontend Integration Planner |
+| Status | Ready for Engineering Review |
+| Created | 2026-08-06 |
+| Next Intended Owner | AGENT-104 — Engineering Design Reviewer |
+
+## Revision History
+
+| Version | Date | Author | Changes | Resolved Return IDs |
+|---|---|---|---|---|
+| 1.0 | 2026-08-06 | Frontend Integration Planner | Initial integration | — |
+
+## 2. Page Inventory
+
+Every page this feature touches. Verified against the existing frontend scaffold: the application currently contains a single `/` route rendering inline content (no header, no layout, no settings page, no dashboard, no resource pages).
+
+### P-F022-001 — Root / Home
+**Type:** Existing (modified)
+**Path:** /
+**Purpose:** Existing bootstrap landing page; content unchanged; now rendered inside the new application layout so the header notification indicator is visible platform-wide.
+**Permission gate:** None (anonymous reachable; indicator hidden for anonymous users)
+**Feature source:** US-F022-001, FR-F022-004 (header indicator surface)
+
+### P-F022-002 — Notification Center
+**Type:** New
+**Path:** /notifications
+**Purpose:** Lists the identified user's system-generated notifications (title, message, timestamp, read state), newest first, with server-side pagination; provides per-row mark-as-read and mark-all-as-read; provides a link to Notification Preferences.
+**Permission gate:** Authenticated session (TD §17 — DRF `IsAuthenticated` default; anonymous → 401)
+**Feature source:** US-F022-002, US-F022-003, FR-F022-001..007, AC-F022-001..005
+
+### P-F022-003 — Notification Preferences
+**Type:** New
+**Path:** /notifications/preferences
+**Purpose:** Lists every defined notification category with label, description, and enabled state; the user toggles each category and saves via full-replacement update; changes apply to notifications generated after the save.
+**Permission gate:** Authenticated session (TD §17 — DRF `IsAuthenticated` default; anonymous → 401)
+**Feature source:** US-F022-004, FR-F022-008, FR-F022-009, AC-F022-006
+
+## 3. Route Map
+
+### New Routes
+
+| Route | Page | Parameters | Permission |
+|---|---|---|---|
+| /notifications | P-F022-002 | none | Authenticated session |
+| /notifications/preferences | P-F022-003 | none | Authenticated session |
+
+### Modified Routes
+
+| Route | Change | Reason |
+|---|---|---|
+| / | Route stays; page rendered inside new application layout that adds the header indicator | FR-F022-004 requires a header notification indicator; codebase inspection confirms no header surface exists |
+
+### Removed Routes
+
+None.
+
+## 4. Navigation Changes
+
+| Entry | Type | Target | Location | Condition |
+|---|---|---|---|---|
+| Notification indicator (unread count) | New | /notifications | Application header (new AppHeader surface present on all routes) | Identified (authenticated) user |
+| Notification preferences link | New | /notifications/preferences | Notification Center page | Always visible on the page |
+
+## 5. Page Flow
+
+Ordered sequence of user navigation through feature pages.
+
+```
+1. / → AppLayout renders the header; indicator hidden for anonymous; identified user sees unread count
+2. Click notification indicator → /notifications (Notification Center, P-F022-002)
+3. Mark single notification read → stays on page; indicator count updates from mutation response
+4. Mark all as read → stays on page; indicator count → 0
+5. Click "Notification preferences" → /notifications/preferences (P-F022-003)
+6. Toggle categories and save → stays on page; save confirmation shown
+7. Navigate back to /notifications or /
+```
+
+## 6. UI Behaviour Matrix
+
+Bridges every user-facing Feature Specification requirement to implementation.
+
+| # | User Action | Trigger | Backend (TD ref) | Result |
+|---|---|---|---|---|
+| 1 | View unread count at a glance | Header renders; poll interval fires | API-F022-004: GET unread-count | NotificationIndicator shows the current count |
+| 2 | Open Notification Center | Click notification indicator | Navigation → API-F022-001 | Browser navigates to /notifications; list query starts |
+| 3 | View notification list | Navigate to /notifications | API-F022-001: GET list | NotificationCenterPage renders notifications newest first with title, message, timestamp, read state |
+| 4 | Page through history | Click next/previous page control | API-F022-001: GET list?page=N | List renders the next/previous page of notifications |
+| 5 | Mark single notification read | Click per-row mark-as-read | API-F022-002: POST /{id}/read/ | Row displays as read; indicator count updates from the authoritative response count |
+| 6 | Mark all notifications read | Click mark-all-as-read | API-F022-003: POST /read-all/ | All rows display as read; indicator count → 0 |
+| 7 | View preferences | Navigate to /notifications/preferences | API-F022-005: GET preferences | Preferences page lists all defined categories with enabled state |
+| 8 | Change and save preferences | Toggle categories; click Save | API-F022-006: PUT preferences | Save confirmation; future generation gated server-side per FR-F022-009 |
+| 9 | See new notifications without reload | Poll interval fires while any page is open | API-F022-004: GET unread-count | Indicator count refreshes; list query refreshes on invalidation/refetch |
+| 10 | Indicator reflects read actions immediately | Any read mutation completes | API-F022-002 / API-F022-003 responses | Indicator updates from authoritative post-mutation counts |
+| 11 | Anonymous user has no notification surface | Anonymous session on any route | TD §17 (IsAuthenticated) | Indicator hidden; notification routes redirect away |
+
+**Traceability:** Rows 1–10 map to FR-F022-001 through FR-F022-011 and AC-F022-001 through AC-F022-008. Row 11 maps to FR-F022-010 / AC-F022-007 and TD §17. No user-facing requirement is left unmapped.
+
+## 7. Page Responsibility Matrix
+
+Per page, what it owns and what it explicitly does not own.
+
+| Page | Owns | Explicitly Does NOT Own |
+|---|---|---|
+| / (modified) | Existing root landing content; rendering inside AppLayout | Notification data; unread-count state; preferences; navigation chrome (AppLayout owns chrome); auth/session (AppHeader owns the gate) |
+| /notifications (new) | Notification list display; pagination cursor; per-row mark-as-read trigger; mark-all-as-read trigger; list loading/empty/error states; link to preferences | Preferences; unread-count badge state (NotificationIndicator owns display, NotificationSyncService owns data); navigation chrome; session/auth |
+| /notifications/preferences (new) | Category listing; draft toggle state; save action; save success/error feedback | Notification list; unread count; navigation chrome; session/auth |
+
+## 8. Page Ownership Matrix
+
+| Page | Type | Feature Components | Reused/Modified Components |
+|---|---|---|---|
+| / | Existing (modified) | C-F022-008 (AppHeader), C-F022-009 (AppLayout) | AppRouteShell (modified) |
+| /notifications | New | C-F022-001, C-F022-002, C-F022-003, C-F022-004, C-F022-007 | C-F022-008, C-F022-009 (shared feature components), AppRouteShell (modified) |
+| /notifications/preferences | New | C-F022-005, C-F022-006, C-F022-007 | C-F022-008, C-F022-009 (shared feature components), AppRouteShell (modified) |
+
+## 9. Component Hierarchy
+
+### P-F022-001 — Root / (modified)
+
+```
+AppRouteShell (Modified — registers routes, wraps all routes in AppLayout)
+└── AppLayout (New — C-F022-009)
+    ├── AppHeader (New — C-F022-008)
+    │   └── NotificationIndicator (New — C-F022-001)
+    └── Existing root content (unchanged)
+```
+
+### P-F022-002 — Notification Center
+
+```
+AppLayout (New — C-F022-009)
+├── AppHeader (New — C-F022-008)
+│   └── NotificationIndicator (New — C-F022-001)
+└── NotificationCenterPage (New — C-F022-002)
+    ├── NotificationList (New — C-F022-003)
+    │   └── NotificationRow (New — C-F022-004)
+    └── Mark-all-as-read action (owned by C-F022-002)
+```
+
+### P-F022-003 — Notification Preferences
+
+```
+AppLayout (New — C-F022-009)
+├── AppHeader (New — C-F022-008)
+│   └── NotificationIndicator (New — C-F022-001)
+└── NotificationPreferencesPage (New — C-F022-005)
+    └── NotificationPreferencesForm (New — C-F022-006)
+```
+
+## 10. Component Catalog
+
+### C-F022-001 — NotificationIndicator
+**Type:** New
+**Page:** P-F022-001 (surface present on all routes)
+**Responsibility:** Displays the identified user's current unread notification count in the header; consumes the polled unread-count query; reflects authoritative counts from read-mutation responses; navigates to /notifications; hidden for anonymous users; degrades to no count after sustained poll failure.
+**APIs consumed:** API-F022-004 (via C-F022-007)
+**Permission gate:** Authenticated session (inherited from C-F022-008)
+**State:** unreadCount (data owned by C-F022-007; rendered here)
+**Requires empty/error handling:** Y
+
+### C-F022-002 — NotificationCenterPage
+**Type:** New
+**Page:** P-F022-002
+**Responsibility:** Page container for the Notification Center; fetches the paginated notification list; owns the pagination cursor; triggers mark-all-as-read; provides the link to Notification Preferences; renders loading, empty, and error states.
+**APIs consumed:** API-F022-001, API-F022-003 (via C-F022-007)
+**Permission gate:** Authenticated session (route level)
+**State:** currentPage; list data (data owned by C-F022-007; page cursor owned here)
+**Requires empty/error handling:** Y
+
+### C-F022-003 — NotificationList
+**Type:** New
+**Page:** P-F022-002
+**Responsibility:** Renders the paginated list of notifications newest first; delegates each entry to NotificationRow; renders the empty state.
+**APIs consumed:** (none — receives data from parent)
+**Permission gate:** (none — inherits from parent)
+**State:** (none — stateless, receives props)
+**Requires empty/error handling:** Y
+
+### C-F022-004 — NotificationRow
+**Type:** New
+**Page:** P-F022-002
+**Responsibility:** Renders a single notification (title, message, timestamp, read state); triggers the mark-as-read mutation for its notification.
+**APIs consumed:** API-F022-002 (via C-F022-007)
+**Permission gate:** (none — inherits from parent)
+**State:** (none — stateless, receives props)
+**Requires empty/error handling:** N
+
+### C-F022-005 — NotificationPreferencesPage
+**Type:** New
+**Page:** P-F022-003
+**Responsibility:** Page container for preferences; fetches the defined categories with enabled state; renders the form; handles loading and error states.
+**APIs consumed:** API-F022-005 (via C-F022-007)
+**Permission gate:** Authenticated session (route level)
+**State:** preferences data (owned by C-F022-007; rendered here)
+**Requires empty/error handling:** Y
+
+### C-F022-006 — NotificationPreferencesForm
+**Type:** New
+**Page:** P-F022-003
+**Responsibility:** Renders one toggle per defined category; owns draft toggle state and save status; saves via full-replacement update; shows save success and error feedback.
+**APIs consumed:** API-F022-006 (via C-F022-007)
+**Permission gate:** (none — inherits from parent)
+**State:** draftToggles; saveStatus
+**Requires empty/error handling:** Y
+
+### C-F022-007 — NotificationSyncService
+**Type:** New
+**Page:** All (app-level client data layer)
+**Responsibility:** Single client data layer for the notification domain; owns the unread-count query (polled), the list query, and the preferences query; owns the mark-read, mark-all-read, and save-preferences mutations; owns the invalidation map so every mutation refreshes count and list; propagates typed loading/error/stale states to consuming surfaces.
+**APIs consumed:** API-F022-001, API-F022-002, API-F022-003, API-F022-004, API-F022-005, API-F022-006 (all six, via the existing apiClient service)
+**Permission gate:** (none — inherits from platform session; existing apiClient handles 401)
+**State:** Query/mutation cache for unread count, notification list, and preferences
+**Requires empty/error handling:** N (propagates typed states; not a rendering component)
+
+### C-F022-008 — AppHeader
+**Type:** New
+**Page:** P-F022-001 (surface present on all routes)
+**Responsibility:** Application header surface; hosts the notification indicator; owns the identified-user gate derived from the existing session service; must never block page rendering when notification state is unavailable.
+**APIs consumed:** (none directly — session via existing authService; indicator child consumes API-F022-004)
+**Permission gate:** Authenticated session (component level)
+**State:** identifiedUser (session state, derived from existing authService session check)
+**Requires empty/error handling:** N
+
+### C-F022-009 — AppLayout
+**Type:** New
+**Page:** P-F022-001, P-F022-002, P-F022-003 (app-level)
+**Responsibility:** Application layout shell; owns the page structure — the header region (AppHeader) and the content region that renders the routed page.
+**APIs consumed:** (none)
+**Permission gate:** (none)
+**State:** (none — stateless structure)
+**Requires empty/error handling:** N
+
+### AppRouteShell
+**Type:** Modified
+**Page:** All
+**Responsibility:** Registers the application route set; wraps all routes in AppLayout; existing `/` route content remains unchanged.
+**APIs consumed:** (none)
+**Permission gate:** (none)
+**State:** (none)
+**Reuse rationale:** Existing application route shell (verified single `/` route); gains the new notification routes and layout composition.
+**Requires empty/error handling:** N
+
+## 11. API-to-Component Mapping
+
+| API (TD §11) | Component | Method | Purpose |
+|---|---|---|---|
+| API-F022-001 — List notifications | C-F022-007 (surfaced by C-F022-002 → C-F022-003) | GET | Fetch paginated notification list for the Notification Center |
+| API-F022-002 — Mark single read | C-F022-007 (triggered by C-F022-004) | POST | Mark one notification read; response carries the authoritative unread count |
+| API-F022-003 — Mark all read | C-F022-007 (triggered by C-F022-002) | POST | Mark all notifications read; response carries the authoritative unread count |
+| API-F022-004 — Unread count | C-F022-007 (surfaced by C-F022-001) | GET | Polled unread-count endpoint for the header indicator |
+| API-F022-005 — Get preferences | C-F022-007 (surfaced by C-F022-005) | GET | Fetch all defined categories with enabled state |
+| API-F022-006 — Update preferences | C-F022-007 (triggered by C-F022-006) | PUT | Save full-replacement preferences |
+
+## 12. Permission Mapping
+
+The Technical Design does not define named fine-grained permissions. Section 17 (Security and Privacy) requires an authenticated session on every notification endpoint (DRF `IsAuthenticated` default; anonymous → 401). This is the single user-facing permission gate for F-022.
+
+| Permission (TD §17) | Gate Location | Mechanism | Deny Behaviour |
+|---|---|---|---|
+| Authenticated session | Routes /notifications, /notifications/preferences | Route guard | Anonymous users redirected away from notification routes |
+| Authenticated session | C-F022-008 (AppHeader) / C-F022-001 (NotificationIndicator) | Conditional render | Indicator hidden for anonymous users; header remains non-blocking |
+| Authenticated session | C-F022-002..006 (notification pages) | Inherited route-level guard | Anonymous users never reach notification pages |
+
+## 13. State Ownership
+
+| State | Conceptual Owner | Notes |
+|---|---|---|
+| unreadCount | C-F022-007 (NotificationSyncService) | Polled query from API-F022-004; authoritative post-mutation counts from API-F022-002/003; rendered by C-F022-001 |
+| notificationList (current page) | C-F022-007 (NotificationSyncService) | Query from API-F022-001; invalidated by read mutations; rendered by C-F022-002/003 |
+| currentPage (pagination cursor) | C-F022-002 (NotificationCenterPage) | Page-local navigation state; passed to the list query |
+| preferences (saved state) | C-F022-007 (NotificationSyncService) | Query from API-F022-005; updated by the API-F022-006 response |
+| draftToggles / saveStatus | C-F022-006 (NotificationPreferencesForm) | Form-local draft state; server remains authoritative until save succeeds |
+| identifiedUser (session) | C-F022-008 (AppHeader) | Derived from the existing authService session check; gates indicator visibility |
+
+## 14. Reuse Opportunities
+
+### Reused Without Change
+
+| Candidate | Location | Rationale |
+|---|---|---|
+| apiClient | Existing API client service module | Existing axios instance with `/api/` base, CSRF header injection, and 401 handling; consumed by C-F022-007 for all notification requests |
+| authService (session check, User identity) | Existing auth service module | Existing session-state access reused for identified-user gating in C-F022-008 |
+| theme | Existing MUI theme module | Existing theme consumed by new surfaces |
+| React Query provider | Existing app-level provider in the entry module | Existing QueryClientProvider capability consumed by C-F022-007 |
+
+### Modified
+
+| Candidate | Location | Modification |
+|---|---|---|
+| AppRouteShell (application route shell) | Existing application route shell | Register new routes; wrap routes in AppLayout |
+
+### Not Reused
+
+| Candidate | Location | Reason |
+|---|---|---|
+| SystemInfo | Existing components directory | Bootstrapped pipeline-validation placeholder that fetches system status; no structural relationship to the notification domain; raw-fetch pattern with local state, incompatible with the shared sync-service model |
+| authService-as-flat-function-module pattern | Existing auth service module | Auth-scoped module; adding notification queries/mutations would pollute its boundary and provide no shared cache, invalidation map, or polling |
+| MUI library primitives (e.g., AppBar, Badge, List) | Third-party UI library (existing dependency) | Library primitives, not application components; they are building blocks composed inside new components, not reusable application surfaces |
+
+### New Components — Justification
+
+| Component | Why New | Candidates Evaluated |
+|---|---|---|
+| C-F022-001 (NotificationIndicator) | No header or indicator surface exists in the application (verified) | SystemInfo — unrelated; MUI primitives — library baseline only |
+| C-F022-002 (NotificationCenterPage) | No page component exists beyond the inline root content (verified) | SystemInfo — unrelated |
+| C-F022-003 (NotificationList) | No list component exists (verified) | MUI List — library primitive, no domain behavior |
+| C-F022-004 (NotificationRow) | No row/item component exists (verified) | MUI ListItem — library primitive, no domain behavior |
+| C-F022-005 (NotificationPreferencesPage) | No preferences/settings surface exists (verified) | authService — no UI; SystemInfo — unrelated |
+| C-F022-006 (NotificationPreferencesForm) | No form/settings component exists (verified) | MUI form primitives — library baseline only |
+| C-F022-007 (NotificationSyncService) | No client data layer for the notification domain exists; existing services are auth-scoped function modules | authService pattern — rejected (pollutes auth boundary; no shared cache/invalidation/polling) |
+| C-F022-008 (AppHeader) | No application header surface exists (verified: the route shell renders inline content only) | SystemInfo — unrelated; MUI AppBar — library primitive |
+| C-F022-009 (AppLayout) | No layout or page-shell component exists (verified) | App route shell — minimal, has no layout responsibility |
+
+## 15. Frontend Design Decisions
+
+### FD-F022-001 — F-022 introduces the application header surface
+**Context:** FR-F022-004 requires a header notification indicator, and the success measures require reaching the Notification Center from the header. Codebase inspection confirms no header or layout component exists; the application route shell renders inline content only.
+**Selected approach:** Create a new AppHeader surface hosting the notification indicator, contained in a new AppLayout shell that wraps all routes, making the indicator platform-wide.
+**Alternatives considered:** (a) Embed the indicator only on notification routes — rejected: the indicator must be visible from the general surface per US-F022-001; (b) defer header creation to another feature — rejected: no other feature provides a header, and F-022 requires the surface.
+**Rationale:** The header is a structural prerequisite for the feature's core "at a glance" behaviour; the minimal layout wraps the existing route set without altering page content.
+**Consequences:** Every existing and future route renders inside AppLayout; AppHeader must remain non-blocking when notification state is unavailable.
+**TD dependency:** CMP-F022-004 (Header Notification Indicator), API-F022-004.
+
+### FD-F022-002 — Notification preferences as a dedicated page
+**Context:** TD CMP-F022-005 allows a "page or section" for preferences; no settings page exists in the frontend.
+**Selected approach:** Standalone route /notifications/preferences.
+**Alternatives considered:** (a) Section within the Notification Center page — rejected: mixes list operations with configuration concerns and couples the preference flow to list navigation; (b) new general settings page — rejected: invents a broader surface beyond F-022 scope.
+**Rationale:** A dedicated page keeps the preferences surface reachable, focused, and independent of list state; it matches the approved "preferences section" scope without expanding into a settings feature.
+**Consequences:** One additional route; the Notification Center links to it.
+**TD dependency:** CMP-F022-005 (Notification Preferences Surface), API-F022-005, API-F022-006.
+
+### FD-F022-003 — NotificationSyncService as the single client data layer
+**Context:** TD CMP-F022-006 requires a client sync service owning queries, mutations, invalidation, and polling. The codebase has no such layer; the only existing data access is the auth service module and a raw-fetch placeholder.
+**Selected approach:** New NotificationSyncService consumes the existing apiClient, owns all notification queries/mutations and the invalidation map; all three surfaces consume notification data through it.
+**Alternatives considered:** (a) Extend the auth service module with notification functions — rejected: pollutes the auth-scoped module boundary and provides no shared cache, invalidation, or polling; (b) per-component direct API calls — rejected: inconsistent count/list sync and duplication.
+**Rationale:** Centralizing notification data access makes the three surfaces consistent (TD CMP-F022-006) and reuses the existing apiClient rather than introducing a second HTTP layer.
+**Consequences:** C-F022-001/002/004/005/006 consume via C-F022-007; the invalidation map keeps the indicator and list converged.
+**TD dependency:** CMP-F022-006 (Client Notification Sync Service), API-F022-001..006.
+
+### FD-F022-004 — Identified-user gating reuses the existing session check
+**Context:** Notification endpoints require an authenticated session (TD §17); the indicator and notification routes must be invisible to anonymous users (FR-F022-010, AC-F022-007). The frontend already exposes session state through the existing auth service session check.
+**Selected approach:** AppHeader owns the identified-user gate derived from the existing session check; anonymous users see no indicator and are redirected away from notification routes.
+**Alternatives considered:** (a) Assume a session is present — rejected: would surface the indicator to anonymous users; (b) introduce a new auth state store — rejected: no store is needed for this scope; the existing session service suffices.
+**Rationale:** Reuse-first: the platform's session capability already exists and is the honest evidence for gating; no new auth architecture is required.
+**Consequences:** Indicator visibility is tied to session state; the header remains non-blocking regardless.
+**TD dependency:** TD §17 (IsAuthenticated), CMP-F022-004.
+
+### FD-F022-005 — Server-side pagination for the Notification Center
+**Context:** The list endpoint is paginated server-side (API-F022-001, DRF PageNumberPagination, PAGE_SIZE 25; EAF-F022-002) with deterministic ordering.
+**Selected approach:** The Notification Center uses the server-provided page-based pagination; the page cursor is owned by the Notification Center page and passed to the list query.
+**Alternatives considered:** (a) Infinite scroll — rejected: the API returns paginated pages, not a continuous stream; (b) client-side paging of a full list — rejected: would require transferring full histories, violating the design's transfer bounds.
+**Rationale:** The backend contract defines page semantics; the frontend adopts them directly, keeping transfers bounded and ordering deterministic.
+**Consequences:** The list query is page-parameterized; the page cursor is page-local state.
+**TD dependency:** API-F022-001 (pagination), EAF-F022-002.
+
+## 16. Ready for Review
+
+- [x] Every user-facing Feature Specification requirement traces to a page or component
+- [x] UI Behaviour Matrix covers every user-facing requirement and acceptance criterion
+- [x] Every user-facing API from Technical Design §11 is mapped to at least one component
+- [x] Every user-facing permission from Technical Design §17 is gated on a page, route, or component
+- [x] New routes verified against existing route map (no conflicts)
+- [x] Component hierarchy is complete for every declared page
+- [x] Reuse analysis is thorough (candidates listed, reasons documented for rejections)
+- [x] API-to-component mapping is complete and traceable
+- [x] Permission mapping specifies deny behaviour for every gate
+- [x] State ownership is declared for every stateful component (conceptual only)
+- [x] Empty/error handling boolean set for every data-consuming component
+- [x] Page Responsibility Matrix covers every page (owns and does-not-own columns filled)
+- [x] Every Frontend Design Decision propagates to affected sections
+- [x] No backend architecture decisions (APIs, permissions, data models)
+- [x] No visual design decisions (colours, typography, spacing, animations, icons)
+- [x] No implementation instructions (file paths, code, test plans)
+- [x] No product behaviour invented beyond the Feature Specification
+**Ready for Review:** YES
+**Readiness reason:** The F-022 notification surface integrates cleanly into the minimal existing scaffold: two new authenticated pages plus the existing root route gain a new application layout and header indicator surface, all six notification APIs map to a single client sync service reused atop the existing API client, the single authenticated-session permission gate is declared for routes and components, and every new component is justified against verified codebase evidence with concrete rejection reasons.

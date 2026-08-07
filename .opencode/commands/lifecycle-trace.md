@@ -29,12 +29,14 @@ When invoked:
    ```
    docs/project/features/F-XXX/
    docs/engineering/technical-plans/F-XXX/
+   docs/engineering/frontend-integration/F-XXX/
    docs/engineering/reviews/F-XXX/
    docs/engineering/approvals/F-XXX/
    docs/engineering/task-plans/F-XXX/
    docs/engineering/execution-packages/F-XXX/
    docs/engineering/archive/F-XXX/
    ```
+   The frontend-integration stage sits between the Technical Design and the Engineering Review in the chain (present only when `Has User-Facing Surface: Yes`; the equivalent work-path location is `docs/engineering/frontend-integration/W-XXX/`).
 2. For each artifact, read the version from its metadata or header.
 3. If the artifact has been archived, locate it in the archive directory and cross-reference
    the `.archived` metadata.
@@ -55,6 +57,8 @@ When invoked:
    ├── technical-design.md v1.1 (CURRENT)
    │   ├── TD-F002-001 through TD-F002-007
    │   └── resolves RC-F002-001, RC-F002-002
+   ├── frontend-integration.md v1.0 (CURRENT) (when Has User-Facing Surface: Yes)
+   │   └── resolves FD-F002-001 through FD-F002-003
 
    Validation
    ├── engineering-review.md v1.0 (ARCHIVED)

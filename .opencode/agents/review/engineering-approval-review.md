@@ -22,6 +22,7 @@ permission:
     "docs/architecture/**": allow
     "docs/adr/**": allow
     "docs/engineering/**": allow
+    "platform/frontend/**": allow
   edit:
     "*": deny
     "docs/engineering/reviews/*/engineering-review.md": allow
@@ -548,8 +549,8 @@ Replace FXXX with the assigned Feature ID without its hyphen. For F-022, use AF-
 
 1. Verify every user-facing requirement and acceptance criterion from the Feature Specification traces to a page or component in the Frontend Integration.
 2. Verify the UI Behaviour Matrix covers every user-facing requirement.
-3. Verify every user-facing API from Technical Design §10 is mapped to at least one component in §11.
-4. Verify every user-facing permission from Technical Design §16 is gated on a page, route, or component in §12.
+3. Verify every user-facing API from the Technical Design's API section is mapped to at least one component in the Frontend Integration's API-to-Component Mapping.
+4. Verify every user-facing permission from the Technical Design's Security and Privacy section is gated on a page, route, or component in the Frontend Integration's Permission Mapping.
 5. Verify new routes do not conflict with existing routes (narrow source inspection of the routing configuration is permitted).
 6. Verify the Page Responsibility Matrix declares both owns and does-not-own columns for every page.
 7. Verify the reuse analysis is evidence-based: candidates are named, rejected candidates carry concrete reasons.
