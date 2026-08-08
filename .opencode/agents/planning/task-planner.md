@@ -120,6 +120,8 @@ Task Planning may begin only when every condition in the Approval Chain Validati
 ### Gap-return principle
 When the Technical Design is not sufficiently determinate for task decomposition, you detect the gap and return it. You never resolve it. Choosing between Vite and CRA, APIView and ViewSet, or inventing missing security behavior is AGENT-103's responsibility, not yours.
 
+An Open Contract Item that materially affects implementation remains unresolved for task decomposition. The Task Planner must preserve that uncertainty and must not convert it into an operative implementation decision. Whether the item blocks review or approval is a separate concern.
+
 ### Semantic-determinism principle
 The test for a design gap is not whether a word like "or" appears in the design. The test is: **Must the Developer choose product behavior, architecture, platform technology, or an integration contract to execute this task?** If yes, return a DGR. Normal conditional behavior (if/else logic, error handling), formatting conventions, and local coding discretion are allowed and do not require DGRs.
 
@@ -474,6 +476,8 @@ A DGR is required when:
 4. **Platform/technology choice required:** A technology, library, or tool must be chosen to implement a task, and the design does not specify it. Example: "Use a charting library" without naming one.
 
 5. **Business behavior ambiguity:** A product behavior needed for implementation is undefined. Example: "Show a warning if the dataset is large" without defining "large."
+
+6. **Open contract item:** The Technical Design declares an Open Contract Item whose resolution materially determines a task's behavior — for example a response contract that governs synchronization, a validation constraint that bounds input. The task description must never inject an operative resolution ("treat X as Y", a status-code choice, a synchronization default) for the unresolved item. Injecting such a default is itself the DGR — the Task Planner has resolved an implementation decision that belongs upstream.
 
 ### When NOT to return a DGR
 
@@ -1163,6 +1167,7 @@ Before marking as complete, verify every task is independently executable.
 - [ ] No blanket traceability claims ("covers all acceptance criteria")
 - [ ] Execution order is generated from the validated dependency graph
 - [ ] No product decisions, architecture choices, or redesigns appear in task descriptions
+- [ ] No task description, completion criterion, or note injects an operative default (a "treat X as Y" imperative, a status-code choice, a synchronization strategy, a refetch decision) that resolves an Open Contract Item declared in the Technical Design §11
 
 ### Work Path Readiness
 - [ ] Work Input Validation Gate passed
@@ -1177,6 +1182,7 @@ Before marking as complete, verify every task is independently executable.
 - [ ] For Level 3: no task manifest was created
 - [ ] For Level 3: escalation detail is included in assessment
 - [ ] No architecture decisions, product decisions, or redesigns appear
+- [ ] No operative default in any task resolves a Technical Design Open Contract Item undeclared in the work request
 
 If any check fails, the plan is NOT ready. Resolve the issue, escalate if appropriate.
 

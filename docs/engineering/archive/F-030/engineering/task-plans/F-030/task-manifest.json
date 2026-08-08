@@ -1,0 +1,200 @@
+{
+  "manifest_version": "1.0",
+  "source_versions": {
+    "feature_spec": "1.0",
+    "technical_design": "1.0",
+    "frontend_integration": "1.0",
+    "engineering_review": "1.0",
+    "engineering_approval": "1.0",
+    "implementation_plan": "1.0"
+  },
+  "feature": {
+    "id": "F-030",
+    "name": "User Display Name"
+  },
+  "tasks": [
+    {
+      "id": "T-F030-001",
+      "domain": "backend",
+      "executor": "backend-implementation-agent",
+      "execution_type": "implementation",
+      "retry_limit": 1,
+      "summary": "Add nullable display_name field to users.User with additive migration",
+      "description": "Extend the existing users.User model (platform/backend/users/models.py) with a display-only display_name attribute per DM-F030-001 and TD-F030-001. The field is a nullable text column (null=True, default None) so the unset state is valid at the storage layer (ES-F030-005); it is distinct from username and never affects sign-in or credentials (BR-F030-003, EAF-F030-003). Generate the additive migration (0002) that adds the users_user.display_name column; no backfill and no default value (existing rows remain unset, per TD Section 20). Do NOT define validation constraints for the field (no maximum length, no character restrictions, no empty-value policy) — those are Open Contract Item 2 and must be escalated as NEEDS CLARIFICATION, not resolved here. Do not add any other profile field (TC-F030-005) and do not alter authentication, session, or credential behavior (TC-F030-004).",
+      "files": [
+        "platform/backend/users/models.py",
+        "platform/backend/users/migrations/0002_user_display_name.py"
+      ],
+      "allowed_writes": [
+        "platform/backend/users/models.py",
+        "platform/backend/users/migrations/**"
+      ],
+      "contracts": ["DB-F030-PROFILE:1.0"],
+      "dependencies": [],
+      "design_refs": [
+        "TD Section 10: DM-F030-001 — users.User.display_name",
+        "TD Section 20: Migration and Backward Compatibility",
+        "TD-F030-001 — Store display_name on users.User"
+      ],
+      "completion_criteria": [
+        "users.User gains a display_name text field that is nullable (null=True) with no default and no max_length/character/empty-value validation constraints (Open Contract Item 2 remains open; nothing resolved).",
+        "Migration 0002_user_display_name adds the additive nullable users_user.display_name column with no backfill; reverse migration drops the column (TD Section 20 rollback safety).",
+        "python manage.py makemigrations users produces exactly the expected 0002 migration; python manage.py migrate applies cleanly on a database containing existing users (EA-F030-003).",
+        "No authentication, session, or credential code is modified (TC-F030-004)."
+      ]
+    },
+    {
+      "id": "T-F030-002",
+      "domain": "backend",
+      "executor": "backend-implementation-agent",
+      "execution_type": "implementation",
+      "retry_limit": 1,
+      "summary": "Implement self-scoped GET/PUT /api/profile/ endpoints with URL registration and observability",
+      "description": "Implement the profile API in the users app per CMP-F030-001, API-F030-001, API-F030-002, and TD-F030-002/003/004. Create a DRF serializer that reads/writes display_name and API views for GET and PUT /api/profile/ that resolve the subject exclusively from request.user — no user identifier in path, query, or body (structural ownership, TD-F030-002, AC-F030-005). Apply DRF SessionAuthentication + IsAuthenticated (TD-F030-003): unauthenticated GET/PUT return 401 with no user data (AC-F030-007); PUT is a mutating request requiring a valid CSRF token (supplied by the frontend apiClient). PUT performs a single atomic full-field replace of the current user's display_name (TD-F030-004); on any failure the stored value is unchanged (AC-F030-006). Malformed payloads (missing field, wrong type, non-JSON) are rejected with platform validation errors and never touch storage (ES-F030-008). Register the endpoint at /api/profile/ in the project URL configuration (config/urls.py per TD Section 5 Affected Boundaries and Section 20) so it is reachable only at /api/profile/ and does not create an unintended /api/auth/profile/ route. Implement Section 19 observability: structured logging of GET/PUT outcomes (user_id, duration; never the display-name value) and an audit event profile_display_name_updated (user_id, timestamp; value not logged). Register the endpoints in the OpenAPI schema via the existing drf-spectacular configuration. CONSTRAINTS (escalation fixtures): Do NOT resolve the PUT success response contract (Open Contract Item 1) — do not choose a success status code, response body, or refetch behavior; escalate as NEEDS CLARIFICATION. Do NOT resolve display_name validation constraints (Open Contract Item 2) — do not add maximum-length, character, or empty-value validation rules; escalate as NEEDS CLARIFICATION. Do not introduce a new metrics dependency for Section 19 counters (TC-F030-003).",
+      "files": [
+        "platform/backend/users/serializers.py",
+        "platform/backend/users/views.py",
+        "platform/backend/users/urls.py",
+        "platform/backend/config/urls.py"
+      ],
+      "allowed_writes": [
+        "platform/backend/users/serializers.py",
+        "platform/backend/users/views.py",
+        "platform/backend/users/urls.py",
+        "platform/backend/config/urls.py"
+      ],
+      "contracts": ["API-F030-PROFILE:1.0", "DB-F030-PROFILE:1.0", "RT-F030-PROFILE:1.0"],
+      "dependencies": ["T-F030-001"],
+      "design_refs": [
+        "TD Section 11: API-F030-001 — GET /api/profile/",
+        "TD Section 11: API-F030-002 — PUT /api/profile/",
+        "TD Section 11: Open Contract Items 1 and 2",
+        "TD Section 9: CMP-F030-001 — Profile API (Backend)",
+        "TD-F030-002 — Self-scoped profile endpoints",
+        "TD-F030-003 — Reuse DRF SessionAuthentication + IsAuthenticated",
+        "TD-F030-004 — PUT full-field replace",
+        "TD Section 17: Security and Privacy",
+        "TD Section 19: Observability",
+        "TD Section 20: Migration and Backward Compatibility (URL registration)"
+      ],
+      "completion_criteria": [
+        "GET /api/profile/ returns 200 with {\"display_name\": <stored value>} for an authenticated user, resolving request.user only; the unset state is represented as JSON null per platform DRF convention (AD-F030-001 advisory).",
+        "PUT /api/profile/ persists the submitted display_name in a single atomic write on request.user's row and is idempotent; on any failure the previously stored value is byte-for-byte unchanged (AC-F030-006, TD-F030-004).",
+        "No request form (path, query, or body) accepts a user identifier, so no cross-user access is expressible (AC-F030-005, TD-F030-002).",
+        "Unauthenticated GET and PUT return 401 with no user data (AC-F030-007).",
+        "Malformed payloads (missing field, wrong type, non-JSON) are rejected with platform validation errors and cause no storage mutation (ES-F030-008).",
+        "Endpoint is registered at /api/profile/ and appears in the OpenAPI schema (drf-spectacular); no unintended /api/auth/profile/ route is exposed.",
+        "GET/PUT outcomes are logged with user_id and duration without the display-name value; update events log event=profile_display_name_updated without the value (TD Section 19).",
+        "The PUT success response contract (Open Contract Item 1) is NOT resolved: no success status code, response body, or refetch behavior is invented; the item is escalated as NEEDS CLARIFICATION.",
+        "display_name validation constraints (Open Contract Item 2) are NOT resolved: no maximum length, character restrictions, or empty-value policy are added; the item is escalated as NEEDS CLARIFICATION."
+      ]
+    },
+    {
+      "id": "T-F030-003",
+      "domain": "backend",
+      "executor": "backend-implementation-agent",
+      "execution_type": "implementation",
+      "retry_limit": 1,
+      "summary": "Write backend tests for the profile API",
+      "description": "Write backend tests for the profile API per TD Section 21 Engineering Scenarios (ES-F030-001 through ES-F030-009) and the API-F030-PROFILE contract, in the existing platform/backend/users/tests package. Tests must cover: authenticated GET returns the stored display_name and renders the unset state for a user who never saved (ES-F030-005); PUT persists the submitted value and a subsequent GET reflects it (AC-F030-004, BR-F030-002); PUT is idempotent (TD-F030-004); a failed or rejected PUT leaves the stored value unchanged (AC-F030-006); unauthenticated GET and PUT return 401 with no data (AC-F030-007); no request form accepts a user identifier, making cross-user access structurally impossible (AC-F030-005, ES-F030-004); malformed payloads are rejected without storage mutation (ES-F030-008); concurrent PUTs converge to one submitted value without torn writes (ES-F030-007). Tests MUST NOT assert the PUT success response contract (success status code, response body, or refetch behavior — Open Contract Item 1) and MUST NOT assert maximum-length, character, or empty-value validation behavior (Open Contract Item 2).",
+      "files": [
+        "platform/backend/users/tests/test_profile_api.py"
+      ],
+      "allowed_writes": [
+        "platform/backend/users/tests/**"
+      ],
+      "contracts": ["API-F030-PROFILE:1.0", "RT-F030-PROFILE:1.0"],
+      "dependencies": ["T-F030-002"],
+      "design_refs": [
+        "TD Section 21: ES-F030-001..009 — Engineering Scenarios",
+        "TD Section 11: API-F030-001 and API-F030-002",
+        "TD-F030-002 — Self-scoped profile endpoints",
+        "TD-F030-003 — Reuse DRF SessionAuthentication + IsAuthenticated",
+        "TD-F030-004 — PUT full-field replace",
+        "TD Section 17: Security and Privacy"
+      ],
+      "completion_criteria": [
+        "Test suite covers authenticated GET (stored and unset states), PUT persistence and idempotency, failure-leaves-value-unchanged, unauthenticated 401 for GET and PUT, structural cross-user inaccessibility, malformed payload rejection without storage mutation, and concurrent PUT convergence.",
+        "No test asserts a specific PUT success status code, response body, or refetch behavior (Open Contract Item 1 remains open).",
+        "No test asserts maximum-length, character-restriction, or empty-value validation behavior (Open Contract Item 2 remains open).",
+        "python manage.py test users (or pytest) passes."
+      ]
+    },
+    {
+      "id": "T-F030-004",
+      "domain": "frontend",
+      "executor": "frontend-implementation-agent",
+      "execution_type": "implementation",
+      "retry_limit": 1,
+      "summary": "Create ProfilePage and ProfileDisplayNameForm components for the /profile page",
+      "description": "Create the /profile page components per FIP P-F030-001, C-F030-001 (ProfilePage) and C-F030-002 (ProfileDisplayNameForm), and TD CMP-F030-002 / TD-F030-005 / FD-F030-002. ProfilePage owns the display value and the local state machine (Idle -> Loading -> Loaded/Error; Loaded -> Saving -> Success/Error) per TD Section 14 and FIP Section 13 (state: displayName, phase). On mount it fetches via apiClient GET /api/profile/ (API-F030-001), renders Loading then Loaded with the current display name (AC-F030-003), handles the unset value without crashing (ES-F030-005), and shows Error on load failure with no stale value shown (AC-F030-006). ProfileDisplayNameForm presents the current value, captures the draft edit (editValue per FIP Section 13), and exposes a save action; ProfilePage submits via apiClient PUT /api/profile/ (API-F030-002, FD-F030-003) and transitions Saving -> Success on a confirmed save or Saving -> Error on failure with the previously loaded value unchanged (AC-F030-006). A 401 from GET or PUT is handled by apiClient's auth:unauthorized dispatch, which drives the F-001 login flow; the page renders no display name and allows no save (AC-F030-007, FIP Section 12). No global store is introduced (FD-F030-002); all profile HTTP goes through apiClient, not raw axios (FD-F030-003). CONSTRAINTS (escalation fixtures): Do NOT resolve Open Contract Item 1 — do not assume a PUT success status code or response body and do not implement a refetch-after-save decision; treat a resolved (non-error) PUT as a confirmed save and escalate the success-indication/refetch mechanism as NEEDS CLARIFICATION. Do NOT resolve Open Contract Item 2 — do not add client-side maximum-length or empty-value validation; escalate as NEEDS CLARIFICATION.",
+      "files": [
+        "platform/frontend/src/pages/ProfilePage.tsx",
+        "platform/frontend/src/components/ProfileDisplayNameForm.tsx"
+      ],
+      "allowed_writes": [
+        "platform/frontend/src/pages/ProfilePage.tsx",
+        "platform/frontend/src/components/ProfileDisplayNameForm.tsx"
+      ],
+      "contracts": ["API-F030-PROFILE:1.0", "RT-F030-PROFILE:1.0"],
+      "dependencies": ["T-F030-002"],
+      "design_refs": [
+        "FIP Section 10: C-F030-001 — ProfilePage",
+        "FIP Section 10: C-F030-002 — ProfileDisplayNameForm",
+        "FIP Section 9: Component Hierarchy (P-F030-001)",
+        "FIP Section 11: API-to-Component Mapping (API-F030-001/002)",
+        "FIP Section 12: Permission Mapping (401 -> auth:unauthorized)",
+        "FIP Section 13: State Ownership",
+        "FIP Section 15: FD-F030-002, FD-F030-003, FD-F030-004",
+        "TD Section 9: CMP-F030-002 — ProfilePage (Frontend)",
+        "TD Section 14: Flows 1-3 and Profile page state transitions",
+        "TD-F030-005 — Frontend profile page with explicit state machine",
+        "TD Section 11: Open Contract Items 1 and 2"
+      ],
+      "completion_criteria": [
+        "ProfilePage and ProfileDisplayNameForm exist per the FIP component catalog and hierarchy (C-F030-001, C-F030-002).",
+        "ProfilePage calls GET /api/profile/ through apiClient on mount and transitions Loading -> Loaded (renders the stored display name, including the unset state) or Loading -> Error on failure (AC-F030-003, AC-F030-006, ES-F030-005).",
+        "Submitting the form calls PUT /api/profile/ through apiClient and transitions Saving -> Success on a resolved PUT or Saving -> Error on failure; the previously loaded value is unchanged in the Error state (AC-F030-004, AC-F030-006).",
+        "A 401 from either endpoint relies on apiClient's auth:unauthorized dispatch to route to the F-001 login flow; no display name is rendered and no save is allowed (AC-F030-007, FIP Section 12).",
+        "No client-side maximum-length, character, or empty-value validation is added (Open Contract Item 2 remains open — escalated, not resolved).",
+        "No PUT response-body parsing or refetch-after-save decision is implemented (Open Contract Item 1 remains open — escalated, not resolved).",
+        "npm run build (tsc + vite build) and npm run lint pass."
+      ]
+    },
+    {
+      "id": "T-F030-005",
+      "domain": "frontend",
+      "executor": "frontend-implementation-agent",
+      "execution_type": "implementation",
+      "retry_limit": 1,
+      "summary": "Register /profile route and add the home page Profile link in App.tsx",
+      "description": "Integrate the profile surface into the application per FIP P-F030-002, FIP Section 3 Route Map, FIP Section 4 Navigation Changes, FD-F030-001, and TD CMP-F030-003. In platform/frontend/src/App.tsx, register a new /profile route that renders ProfilePage (AC-F030-001) and add a single visible \"Profile\" link element inside the existing home page content on the / route that navigates to /profile (AC-F030-002). The home page gains no other behavior (BR-F030-004, TC-F030-006); no app shell, header, sidebar, or navigation infrastructure is introduced (FD-F030-001). Verify the existing vite.config.ts /api proxy already routes /api/profile/ to the backend (target http://backend:8000) — no proxy change is expected; adjust only if the profile route cannot reach the backend. Do not modify any other route or component.",
+      "files": [
+        "platform/frontend/src/App.tsx",
+        "platform/frontend/vite.config.ts"
+      ],
+      "allowed_writes": [
+        "platform/frontend/src/App.tsx",
+        "platform/frontend/vite.config.ts"
+      ],
+      "contracts": ["RT-F030-PROFILE:1.0"],
+      "dependencies": ["T-F030-004"],
+      "design_refs": [
+        "FIP Section 2: P-F030-002 — Home Page",
+        "FIP Section 3: Route Map (/profile)",
+        "FIP Section 4: Navigation Changes (Profile link)",
+        "FIP Section 15: FD-F030-001 — Local navigation only",
+        "TD Section 9: CMP-F030-003 — Home Page Profile Link",
+        "TD Section 5: Affected Boundaries (frontend routing)",
+        "TD-F030-005 — Frontend profile page with explicit state machine and home-page link"
+      ],
+      "completion_criteria": [
+        "App.tsx registers a /profile route that renders ProfilePage (AC-F030-001).",
+        "The / route home page content contains a visible \"Profile\" link that navigates to /profile (AC-F030-002).",
+        "No other home page behavior, global navigation, or app shell change is introduced (BR-F030-004, FD-F030-001).",
+        "The existing vite /api proxy covering /api/profile/ is verified (no change required); no other proxy target is altered.",
+        "npm run build and npm run lint pass."
+      ]
+    }
+  ]
+}
