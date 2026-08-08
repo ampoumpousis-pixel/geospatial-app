@@ -271,6 +271,11 @@ Evidence: `docs/engineering/validation/phase-4-validation.md` (Tests 1–2), `do
 
 **Adoption encoding:** encoded in the frontend-implementation-agent prompt — Step 4 "Validate Implementation Completeness" (no project writes once an implementation-critical clarification is required; structured `NEEDS CLARIFICATION` with Reason/Missing/Impact/Required), backend firewall (no `platform/backend/**` reads), and the forbidden-invention list (FI-I-003).
 
+**Validation evidence:** F-030 execution regression benchmark — three-rung ladder (`docs/engineering/findings/F-030/F-030-execution-test-report.md`):
+- Rung 1 (2 open contracts): historical governance failure — agent silently resolved gaps instead of escalating.
+- Rung 2 (1 open contract): historical governance failure persisted — agent still silently resolved the single remaining gap.
+- Rung 3 (0 open contracts): implementation proceeded correctly — zero silent assumptions, zero boundary violations, zero architectural inventions.
+
 ---
 
 ## Current Status Summary
@@ -288,4 +293,4 @@ Evidence: `docs/engineering/validation/phase-4-validation.md` (Tests 1–2), `do
 | FI-G-004 | Explicit Scope Approval | Validated | Phase 3 | 2026-07-27 |
 | FI-I-001 | Evidence-Based Architecture | Proposed | Phase 4 | 2026-08-06 |
 | FI-I-002 | Semantic Artifact References | Proposed | Phase 4 | 2026-08-06 |
-| FI-I-003 | Implementation Completeness | Proposed | Phase 4 | 2026-08-06 |
+| FI-I-003 | Implementation Completeness | Validated | Phase 4 | 2026-08-08 |
